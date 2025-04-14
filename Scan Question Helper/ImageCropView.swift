@@ -11,6 +11,10 @@ struct ImageCropView: View {
     @State private var imageFrame: CGRect = .zero
     @State private var isDragging = false
     
+    // Define Neon Purple Color
+    let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
+    let dragSensitivityFactor: CGFloat = 0.2 // Further reduced sensitivity
+    
     init(image: UIImage, onComplete: @escaping (UIImage) -> Void) {
         self.image = image
         self.onComplete = onComplete
@@ -63,19 +67,20 @@ struct ImageCropView: View {
                         .padding(.bottom, 30)
                     }
                 } else {
-                    // Image with crop overlay
+                    // --- Image View (now directly in ZStack background) --- 
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .background(GeometryReader { imageGeometry in
                             Color.clear.onAppear {
                                 imageSize = imageGeometry.size
-                                imageFrame = imageGeometry.frame(in: .global)
+                                // Calculate initial image frame relative to the ZStack
+                                imageFrame = imageGeometry.frame(in: .named("ZStackCoordSpace")) 
                             }
                         })
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
-                    // Crop Frame with corners
+                    // --- Crop Frame Overlay --- 
                     ZStack {
                         // Semi-transparent overlay
                         Rectangle()
@@ -90,16 +95,25 @@ struct ImageCropView: View {
                                     )
                             )
                         
+                        // --- Text Label positioned above cropRect --- 
+                        Text("Crop only one problem")
+                            .font(.headline)
+                            .foregroundColor(neonPurple)
+                            .padding(4)
+                            .background(Color.black.opacity(0.5)) // Optional background for readability
+                            .cornerRadius(5)
+                            .position(x: cropRect.midX, y: cropRect.minY - 25) // Position above
+
                         // Crop rectangle outline
                         Rectangle()
-                            .stroke(Color.white, lineWidth: 2)
+                            .stroke(Color.white, lineWidth: 1)
                             .frame(width: cropRect.width, height: cropRect.height)
                             .position(x: cropRect.midX, y: cropRect.midY)
                         
                         // Corner controls
                         Group {
                             // Top Left
-                            CornerControl()
+                            CornerControl(color: neonPurple)
                                 .position(x: cropRect.minX, y: cropRect.minY)
                                 .gesture(DragGesture()
                                     .onChanged { value in
@@ -117,7 +131,7 @@ struct ImageCropView: View {
                                 )
                             
                             // Top Right
-                            CornerControl()
+                            CornerControl(color: neonPurple)
                                 .position(x: cropRect.maxX, y: cropRect.minY)
                                 .gesture(DragGesture()
                                     .onChanged { value in
@@ -134,7 +148,7 @@ struct ImageCropView: View {
                                 )
                             
                             // Bottom Left
-                            CornerControl()
+                            CornerControl(color: neonPurple)
                                 .position(x: cropRect.minX, y: cropRect.maxY)
                                 .gesture(DragGesture()
                                     .onChanged { value in
@@ -151,7 +165,7 @@ struct ImageCropView: View {
                                 )
                             
                             // Bottom Right
-                            CornerControl()
+                            CornerControl(color: neonPurple)
                                 .position(x: cropRect.maxX, y: cropRect.maxY)
                                 .gesture(DragGesture()
                                     .onChanged { value in
@@ -170,19 +184,32 @@ struct ImageCropView: View {
                     .gesture(
                         DragGesture()
                             .onChanged { value in
-                                if !isDragging {
-                                    isDragging = true
-                                } else {
-                                    cropRect.origin.x += value.translation.width
-                                    cropRect.origin.y += value.translation.height
+                                if !isDragging { 
+                                    if cropRect.contains(value.startLocation) { 
+                                         isDragging = true 
+                                    }
+                                } else { 
+                                    let adjustedTranslationX = value.translation.width * dragSensitivityFactor
+                                    let adjustedTranslationY = value.translation.height * dragSensitivityFactor
+                                    
+                                    let potentialX = cropRect.origin.x + adjustedTranslationX
+                                    let potentialY = cropRect.origin.y + adjustedTranslationY
+                                    
+                                    // --- Boundary Check Example (relative to imageFrame) ---
+                                    // Ensure the new rect doesn't go outside the displayed image bounds
+                                    let clampedX = max(imageFrame.minX, min(potentialX, imageFrame.maxX - cropRect.width))
+                                    let clampedY = max(imageFrame.minY, min(potentialY, imageFrame.maxY - cropRect.height))
+                                    
+                                    cropRect.origin.x = clampedX
+                                    cropRect.origin.y = clampedY
                                 }
                             }
                             .onEnded { _ in
-                                isDragging = false
+                                isDragging = false 
                             }
                     )
                     
-                    // Bottom controls
+                    // --- Bottom Controls Overlay --- 
                     VStack {
                         Spacer()
                         HStack(spacing: 40) {
@@ -205,7 +232,7 @@ struct ImageCropView: View {
                                     .font(.title2)
                                     .foregroundColor(.white)
                                     .frame(width: 60, height: 60)
-                                    .background(Color.purple)
+                                    .background(Color.purple) // Keep original purple for button
                                     .clipShape(Circle())
                             }
                         }
@@ -213,6 +240,7 @@ struct ImageCropView: View {
                     }
                 }
             }
+            .coordinateSpace(name: "ZStackCoordSpace") // Add coordinate space name
         }
     }
     
@@ -240,10 +268,12 @@ struct ImageCropView: View {
 }
 
 struct CornerControl: View {
+    let color: Color
+
     var body: some View {
         Circle()
-            .fill(Color.white)
-            .frame(width: 30, height: 30)
+            .fill(color)
+            .frame(width: 20, height: 20)
             .shadow(color: .black.opacity(0.3), radius: 3)
     }
 } 
