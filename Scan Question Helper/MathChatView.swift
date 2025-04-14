@@ -1,6 +1,15 @@
 import SwiftUI
 import UIKit
 
+// MARK: - PreferenceKey for ScrollView Bottom Detection
+struct ScrollViewBottomReachedPreferenceKey: PreferenceKey {
+    static var defaultValue: Bool = false
+    
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
 // MARK: - Message Model
 
 /// A simple model representing a message in the chat.
@@ -15,160 +24,195 @@ struct MathChatView: View {
     @State private var isLoading: Bool = false
     /// The ID of the bot message currently receiving streaming text.
     @State private var currentBotMessageID: UUID? = nil
-
     @Environment(\.presentationMode) var presentationMode
+    @State private var isAtBottom: Bool = false // State to track scroll position
+
+    // Define Neon Purple Color
+    let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
 
     var body: some View {
-        // Use a ZStack to layer the background color
         ZStack {
-            // Lighter overall background color
-            Color(red: 1.0, green: 0.99, blue: 0.96) // Slightly lighter peach
+            Color.black
                 .ignoresSafeArea()
             
-            // Main content VStack
-            VStack(spacing: 16) { // Added spacing between sections
-                // Problem Section in a white blurb - Title now inside
-                VStack(alignment: .leading, spacing: 12) {
-                    // Title moved inside this VStack
-                    HStack {
-                        Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 20))
-                            .foregroundColor(.orange)
-                        Text("Problem")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.black)
-                        Spacer()
-                    }
-                    .padding([.top, .horizontal]) // Padding for the title
-                    
-                    // Divider after title (optional)
-                    // Divider().padding(.horizontal)
+            // --- Wrap entire content in a ScrollView --- 
+            ScrollViewReader { scrollProxy in // Keep ScrollViewReader if needed for scrolling to specific messages
+                ScrollView { 
+                    VStack(spacing: 0) { // Main content VStack
+                        // --- Display Image Directly at Top --- 
+                        if let userMessage = messages.first(where: { $0.isUser && $0.imageData != nil }),
+                           let uiImage = userMessage.image {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .cornerRadius(12)
+                                .frame(maxHeight: UIScreen.main.bounds.height * 0.3) // Limit image height
+                                .padding(.horizontal)
+                                .padding(.top) // Padding above image
+                                .padding(.bottom, 8) // Reduced padding below image
+                        }
 
-                    if let userMessage = messages.first(where: { $0.isUser && $0.imageData != nil }),
-                       let uiImage = userMessage.image {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .cornerRadius(12)
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal) // Padding for the image
-                            .padding(.bottom) // Padding below image
-                    }
-                }
-                .background(Color.white)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.08), radius: 5, x: 0, y: 2)
-                .padding(.horizontal)
-                .padding(.top)
-                
-                // Solution Section in a white blurb - Title now inside
-                VStack(alignment: .leading, spacing: 12) {
-                     // Title moved inside this VStack
-                    HStack {
-                        Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.orange)
-                        Text("Solution")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.black)
-                        Spacer()
-                    }
-                    .padding([.top, .horizontal]) // Padding for the title
+                        // --- Solution Section --- 
+                        VStack(alignment: .leading, spacing: 8) { 
+                            // --- Solution Title --- 
+                            HStack {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.yellow) // Changed color for dark mode
+                                Text("Solution")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white) // Changed color for dark mode
+                                Spacer()
+                            }
+                            .padding([.top, .horizontal])
+                            .padding(.bottom, 4)
 
-                    // Divider after title (optional)
-                    // Divider().padding(.horizontal)
-
-                    // Chat messages scroll view
-                    ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 15) {
+                            // --- Chat messages directly in VStack (NO inner ScrollView) --- 
+                            LazyVStack(alignment: .leading, spacing: 15) { 
+                                // Solution messages
                                 ForEach(messages.filter { !$0.isUser }) { message in
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        messageContentView(message: message)
-                                            .frame(maxWidth: UIScreen.main.bounds.width * 0.9, alignment: .leading)
-                                    }
-                                    .padding(.horizontal)
-                                    .id(message.id)
+                                    messageContentView(message: message)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id(message.id)
                                 }
                                 
+                                // Loading Indicator
                                 if isLoading && currentBotMessageID == nil {
                                     HStack {
                                         ProgressView()
-                                            .padding()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .padding(.leading)
                                         Text("Analyzing your problem...")
                                             .font(.system(size: 16))
                                             .foregroundColor(.gray)
+                                        Spacer()
                                     }
-                                    .padding()
+                                    .padding(.vertical)
+                                }
+                            }
+                            .padding(.horizontal) 
+                            .padding(.bottom) 
+                            
+                            // --- ADDED: Action Buttons --- 
+                            HStack(spacing: 25) { // Adjust spacing as needed
+                                Spacer() // Push buttons to the right initially, or distribute with spacers
+                                
+                                Button(action: { 
+                                    // TODO: Implement Regenerate Action
+                                    print("Regenerate tapped")
+                                    regenerateSolution()
+                                }) { 
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.title2)
+                                        .foregroundColor(.gray)
                                 }
                                 
-                                // Add padding at the bottom
-                                Spacer()
-                                    .frame(height: 80)
-                            }
-                            .onChange(of: messages) { _ in
-                                if let lastMessage = messages.last {
-                                    withAnimation {
-                                        scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
-                                    }
+                                Button(action: { 
+                                    // TODO: Implement Thumbs Up Action
+                                    print("Thumbs Up tapped")
+                                }) { 
+                                    Image(systemName: "hand.thumbsup")
+                                        .font(.title2)
+                                        .foregroundColor(.gray)
                                 }
+                                
+                                Button(action: { 
+                                    // TODO: Implement Thumbs Down Action
+                                    print("Thumbs Down tapped")
+                                }) { 
+                                    Image(systemName: "hand.thumbsdown")
+                                        .font(.title2)
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                Button(action: { 
+                                    // TODO: Implement Copy Action
+                                    copySolutionToClipboard()
+                                    print("Copy tapped")
+                                }) { 
+                                    Image(systemName: "doc.on.doc") // Copy icon
+                                        .font(.title2)
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                Button(action: { 
+                                    // TODO: Implement Share Action
+                                    shareSolution()
+                                    print("Share tapped")
+                                }) { 
+                                    Image(systemName: "square.and.arrow.up") // Share icon
+                                        .font(.title2)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer() // Balance spacer
+                            }
+                            .padding(.horizontal) // Padding for the button row
+                            .padding(.top, 5) // Space above the buttons
+                            // --- END ADDED: Action Buttons ---
+
+                        }
+                        .cornerRadius(16) 
+                        .padding(.horizontal) 
+                        .padding(.bottom, 80) 
+
+                        // --- GeometryReader for scroll detection (Moved inside outer ScrollView's content) --- 
+                        GeometryReader { geometry in
+                            Color.clear
+                                .preference(key: ScrollViewBottomReachedPreferenceKey.self,
+                                            value: geometry.frame(in: .global).maxY < UIScreen.main.bounds.height + 20) 
+                        }
+                        .frame(height: 1)
+                        .padding(.bottom, 80) // Add padding at the very bottom for the button area
+                    } // End Main content VStack
+                    .onChange(of: messages) { _ in // Keep onChange attached to the content?
+                        if let lastMessage = messages.last { 
+                            withAnimation { 
+                                scrollProxy.scrollTo(lastMessage.id, anchor: .bottom)
                             }
                         }
                     }
+                } // End Outer ScrollView
+                // Apply preference change listener to the ScrollView
+                .onPreferenceChange(ScrollViewBottomReachedPreferenceKey.self) { reachedBottom in
+                    self.isAtBottom = reachedBottom
                 }
-                .background(Color.white)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.08), radius: 5, x: 0, y: 2)
-                .padding(.horizontal)
-                .padding(.top)
-            }
+            } // End ScrollViewReader
             
-            // Persistent bottom tab with Rescan button
-            VStack(spacing: 0) {
-                Spacer() // Pushes button to bottom
-                
-                HStack { // Wrap button in HStack for padding
-                    Button(action: {
-                        // Simply dismiss the current view.
-                        // If ScanView was presented modally by HomeView,
-                        // this *should* eventually dismiss the whole cover.
-                        print("Next Problem Tapped - Attempting Dismissal") // Add log
-                        presentationMode.wrappedValue.dismiss()
-                        
-                        // Removed NotificationCenter post - no longer needed for this navigation goal
-                        // DispatchQueue.main.async {
-                        //     presentationMode.wrappedValue.dismiss()
-                        //     NotificationCenter.default.post(name: NSNotification.Name("ResetCameraView"), object: nil)
-                        // }
-                    }) {
-                        HStack {
-                            // Correct Icon
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 20))
-                            // Correct Text
-                            Text("Next Problem")
-                                .font(.system(size: 16, weight: .semibold))
+            // --- Conditional Bottom Button --- 
+            VStack { 
+                Spacer() // Pushes to bottom
+                if isAtBottom { 
+                    HStack { 
+                        Button(action: { 
+                            print("Next Problem Tapped - Attempting Dismissal") 
+                            presentationMode.wrappedValue.dismiss()
+                        }) { 
+                            HStack { 
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.system(size: 20))
+                                Text("Next Problem")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(neonPurple) // Use neon purple
+                            .foregroundColor(.white)
+                            .clipShape(Capsule())
+                            .shadow(color: neonPurple.opacity(0.5), radius: 8, x: 0, y: 4)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                        .shadow(color: Color.orange.opacity(0.3), radius: 5, x: 0, y: 3)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity)) // Add animation
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12) // Standard bottom padding
-                .background(
-                     Color(red: 1.0, green: 0.99, blue: 0.96) // Match the main background
-                         .edgesIgnoringSafeArea(.bottom)
-                 )
             }
+            .animation(.easeInOut, value: isAtBottom) // Animate the button appearance
         }
-        .navigationTitle("Math Chat")
+        .navigationTitle("Math Solution") // Changed Title
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .onAppear {
+        .preferredColorScheme(.dark) // Request dark mode for navigation bar
+        .onAppear { 
             addUserImageMessage()
             fetchSolution()
         }
@@ -193,12 +237,14 @@ struct MathChatView: View {
                     .cornerRadius(10)
                     .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
             } else {
+                // --- Assistant message styling with individual background --- 
                 Text(text)
                     .padding()
-                    .background(Color.white)
-                    .foregroundColor(.black)
+                    // Apply background here instead of container
+                    .background(Color.gray.opacity(0.2)) 
+                    .foregroundColor(Color.white.opacity(0.9))
                     .cornerRadius(10)
-                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .frame(maxWidth: .infinity, alignment: .leading) // Ensure it takes width
             }
         }
     }
@@ -224,12 +270,12 @@ struct MathChatView: View {
         }
         let base64Image = imageData.base64EncodedString()
         
-        // --- Load API Key using shared function --- 
+        // --- Load API Key using shared function ---
         guard let apiKey = loadAPIKey() else {
             updateBotMessage(with: "API Key not found. Please check Secrets.plist.")
             // Ensure loading state is reset if key loading fails
-            isLoading = false 
-            currentBotMessageID = nil 
+            isLoading = false
+            currentBotMessageID = nil
             return
         }
         // --- End Load API Key ---
@@ -277,7 +323,7 @@ struct MathChatView: View {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         // Use the loaded apiKey from Secrets.plist via loadAPIKey()
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") 
+        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let body: [String: Any] = [
@@ -299,7 +345,7 @@ struct MathChatView: View {
             // Append each chunk to the bot message text.
             if let index = messages.firstIndex(where: { $0.id == self.currentBotMessageID }) {
                 // Use self explicitly in closure
-                self.messages[index].text = (self.messages[index].text ?? "") + chunk 
+                self.messages[index].text = (self.messages[index].text ?? "") + chunk
             }
         } onCompletion: {
             // Use self explicitly in closure
@@ -326,6 +372,41 @@ struct MathChatView: View {
         isLoading = false
         currentBotMessageID = nil
     }
+
+    // --- ADDED: Placeholder functions for new actions --- 
+    private func regenerateSolution() {
+        // Clear previous bot messages and fetch again
+        messages.removeAll { !$0.isUser } // Keep user image/prompt
+        fetchSolution()
+    }
+
+    private func copySolutionToClipboard() {
+        let solutionText = messages.filter { !$0.isUser }.compactMap { $0.text }.joined(separator: "\n\n")
+        if !solutionText.isEmpty {
+            UIPasteboard.general.string = solutionText
+            // Optionally show a confirmation to the user
+        }
+    }
+
+    private func shareSolution() {
+        let solutionText = messages.filter { !$0.isUser }.compactMap { $0.text }.joined(separator: "\n\n")
+        if !solutionText.isEmpty {
+            let activityViewController = UIActivityViewController(activityItems: [solutionText], applicationActivities: nil)
+            
+            // Find the current key window scene to present the share sheet
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+               let rootViewController = window.rootViewController {
+                // Find the most presented view controller
+                var topController = rootViewController
+                while let presentedViewController = topController.presentedViewController {
+                    topController = presentedViewController
+                }
+                topController.present(activityViewController, animated: true, completion: nil)
+            }
+        }
+    }
+    // --- END ADDED placeholder functions ---
 }
 
 // MARK: - Preview
@@ -336,6 +417,6 @@ struct MathChatView_Previews: PreviewProvider {
             // Replace "MathPlaceholder" with an actual image asset name.
             MathChatView(selectedImage: UIImage(named: "MathPlaceholder") ?? UIImage())
         }
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
     }
 }
