@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSApplePayUsageDescription</key>
+	<string>Allow the app to use Apple Pay for payments.</string>
+	<key>NSPaymentServicesUsageDescription</key>
+	<string>We use payment services to complete transactions securely.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Allow the app to notify you of new math problem solutions and updates.
+
+
+
+
+
+
+Allow the app to notify you of new math problem solutions and updates.
+
+
+
+
+
+
+Allow the app to notify you of new math problem solutions and updates.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access to scan math problems</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need photo library access to upload math problems</string>
+</dict>
+</plist>
