@@ -13,7 +13,8 @@ struct ImageCropView: View {
     
     // Define Neon Purple Color
     let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
-    let dragSensitivityFactor: CGFloat = 0.2 // Further reduced sensitivity
+    // Increase sensitivity slightly for better responsiveness
+    let dragSensitivityFactor: CGFloat = 0.4
     
     init(image: UIImage, onComplete: @escaping (UIImage) -> Void) {
         self.image = image
@@ -67,20 +68,19 @@ struct ImageCropView: View {
                         .padding(.bottom, 30)
                     }
                 } else {
-                    // --- Image View (now directly in ZStack background) --- 
+                    // --- Image View (stays in background) --- 
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .background(GeometryReader { imageGeometry in
                             Color.clear.onAppear {
                                 imageSize = imageGeometry.size
-                                // Calculate initial image frame relative to the ZStack
-                                imageFrame = imageGeometry.frame(in: .named("ZStackCoordSpace")) 
+                                imageFrame = imageGeometry.frame(in: .global)
                             }
                         })
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
-                    // --- Crop Frame Overlay --- 
+                    // --- Crop Frame Overlay and Text (remain in ZStack) --- 
                     ZStack {
                         // Semi-transparent overlay
                         Rectangle()
@@ -95,20 +95,21 @@ struct ImageCropView: View {
                                     )
                             )
                         
-                        // --- Text Label positioned above cropRect --- 
-                        Text("Crop only one problem")
-                            .font(.headline)
-                            .foregroundColor(neonPurple)
-                            .padding(4)
-                            .background(Color.black.opacity(0.5)) // Optional background for readability
-                            .cornerRadius(5)
-                            .position(x: cropRect.midX, y: cropRect.minY - 25) // Position above
-
                         // Crop rectangle outline
                         Rectangle()
                             .stroke(Color.white, lineWidth: 1)
                             .frame(width: cropRect.width, height: cropRect.height)
                             .position(x: cropRect.midX, y: cropRect.midY)
+                        
+                        // --- Text Label Positioned Above Crop Rect --- 
+                        Text("Crop only one problem")
+                            .font(.headline)
+                            .foregroundColor(neonPurple)
+                            .padding(8)
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(5)
+                            // Position above the top edge of the cropRect
+                            .position(x: cropRect.midX, y: cropRect.minY - 25) 
                         
                         // Corner controls
                         Group {
@@ -186,26 +187,26 @@ struct ImageCropView: View {
                             .onChanged { value in
                                 if !isDragging { 
                                     if cropRect.contains(value.startLocation) { 
-                                         isDragging = true 
+                                         isDragging = true
                                     }
                                 } else { 
+                                    // Apply sensitivity factor
                                     let adjustedTranslationX = value.translation.width * dragSensitivityFactor
                                     let adjustedTranslationY = value.translation.height * dragSensitivityFactor
                                     
                                     let potentialX = cropRect.origin.x + adjustedTranslationX
                                     let potentialY = cropRect.origin.y + adjustedTranslationY
                                     
-                                    // --- Boundary Check Example (relative to imageFrame) ---
-                                    // Ensure the new rect doesn't go outside the displayed image bounds
-                                    let clampedX = max(imageFrame.minX, min(potentialX, imageFrame.maxX - cropRect.width))
-                                    let clampedY = max(imageFrame.minY, min(potentialY, imageFrame.maxY - cropRect.height))
+                                    // Boundary checks (keep these)
+                                    let clampedX = max(0, min(potentialX, geometry.size.width - cropRect.width))
+                                    let clampedY = max(0, min(potentialY, geometry.size.height - cropRect.height))
                                     
                                     cropRect.origin.x = clampedX
                                     cropRect.origin.y = clampedY
                                 }
                             }
                             .onEnded { _ in
-                                isDragging = false 
+                                isDragging = false
                             }
                     )
                     
@@ -240,29 +241,73 @@ struct ImageCropView: View {
                     }
                 }
             }
-            .coordinateSpace(name: "ZStackCoordSpace") // Add coordinate space name
         }
     }
     
     private func cropImage() -> UIImage? {
-        // Calculate the scale between the display size and actual image size
-        let scale = image.size.width / imageFrame.width
+        guard imageFrame.width > 0, imageFrame.height > 0 else { return nil } 
+
+        // 1. Calculate the actual scale factor used by .fit
+        let viewWidth = imageFrame.width
+        let viewHeight = imageFrame.height
+        let imageWidth = image.size.width
+        let imageHeight = image.size.height
+
+        let widthScale = viewWidth / imageWidth
+        let heightScale = viewHeight / imageHeight
+        let scale = min(widthScale, heightScale) // The scale used by .fit
         
-        // Convert crop rect to image coordinates
-        let normalizedX = (cropRect.minX - imageFrame.minX) * scale
-        let normalizedY = (cropRect.minY - imageFrame.minY) * scale
-        let normalizedWidth = cropRect.width * scale
-        let normalizedHeight = cropRect.height * scale
+        // 2. Calculate the size of the image as displayed on screen
+        let displayedImageWidth = imageWidth * scale
+        let displayedImageHeight = imageHeight * scale
+
+        // 3. Calculate the offset of the displayed image within the view frame (due to letterboxing/pillarboxing)
+        let offsetX = (viewWidth - displayedImageWidth) / 2.0
+        let offsetY = (viewHeight - displayedImageHeight) / 2.0
+
+        // 4. Calculate the top-left corner of the *actual* displayed image in global coordinates
+        let displayedImageMinX = imageFrame.minX + offsetX
+        let displayedImageMinY = imageFrame.minY + offsetY
+
+        // 5. Convert cropRect coordinates to be relative to the displayed image
+        let cropRelativeX = cropRect.minX - displayedImageMinX
+        let cropRelativeY = cropRect.minY - displayedImageMinY
         
-        let cropZone = CGRect(x: normalizedX,
-                            y: normalizedY,
-                            width: normalizedWidth,
-                            height: normalizedHeight)
-        
-        // Ensure we're within the image bounds
+        // Clamp relative coordinates to be within the displayed image bounds
+        let clampedCropRelativeX = max(0, cropRelativeX)
+        let clampedCropRelativeY = max(0, cropRelativeY)
+        let clampedCropRelativeWidth = min(cropRect.width, displayedImageWidth - clampedCropRelativeX)
+        let clampedCropRelativeHeight = min(cropRect.height, displayedImageHeight - clampedCropRelativeY)
+
+        // 6. Scale the relative coordinates back to the original image's pixel coordinates
+        let finalScale = 1.0 / scale // Scale from display coords back to original image coords
+        let finalCropX = clampedCropRelativeX * finalScale
+        let finalCropY = clampedCropRelativeY * finalScale
+        let finalCropWidth = clampedCropRelativeWidth * finalScale
+        let finalCropHeight = clampedCropRelativeHeight * finalScale
+
+        // Create the final crop zone in the original image's coordinate system
+        let cropZone = CGRect(
+            x: finalCropX,
+            y: finalCropY,
+            width: finalCropWidth,
+            height: finalCropHeight
+        )
+
+        // Ensure the crop zone is valid within the original image dimensions
         let validCropZone = cropZone.intersection(CGRect(origin: .zero, size: image.size))
         
-        guard let cgImage = image.cgImage?.cropping(to: validCropZone) else { return nil }
+        guard validCropZone.width > 0, validCropZone.height > 0 else {
+            print("Invalid crop zone calculated.")
+            return nil
+        }
+
+        // Perform the actual cropping
+        guard let cgImage = image.cgImage?.cropping(to: validCropZone) else {
+            print("Failed to crop CGImage.")
+            return nil
+        }
+        
         return UIImage(cgImage: cgImage)
     }
 }

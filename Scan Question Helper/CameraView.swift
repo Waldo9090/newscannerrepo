@@ -45,7 +45,7 @@ struct CameraView: View {
                 
                 // Bottom controls
                 HStack {
-                    // Gallery button
+                    // Gallery button (remains on the left)
                     Button(action: {
                         showImagePicker = true
                     }) {
@@ -53,38 +53,47 @@ struct CameraView: View {
                             .font(.title)
                             .foregroundColor(.white)
                             .frame(width: 60, height: 60)
-                            .background(Color.black.opacity(0.5))
                             .clipShape(Circle())
                     }
-                    .padding(.leading, 30)
                     
-                    Spacer()
+                    Spacer() // Spacer to push capture button to center
                     
-                    // Capture button
+                    // Capture button (centered)
                     Button(action: {
                         cameraController.capturePhoto { image in
                             if let image = image {
-                                selectedImage = image // Store pre-crop image
-                                showCropView = true // Show crop view
+                                selectedImage = image 
+                                showCropView = true 
                             }
                         }
                     }) {
                         ZStack {
+                            // Change inner circle fill to gray
                             Circle()
-                                .fill(Color.white)
+                                .fill(Color.gray) 
                                 .frame(width: 70, height: 70)
                             Circle()
                                 .stroke(Color.white, lineWidth: 4)
                                 .frame(width: 80, height: 80)
                         }
                     }
-                    .padding(.horizontal, 30)
                     
-                    // Spacer to balance layout
-                    Spacer()
-                        .frame(width: 90)
+                    Spacer() // Spacer to keep capture button centered
+                    
+                    // Ensure gallery button side has same spacing by adding frame
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.title)
+                        .foregroundColor(.clear) // Make it invisible
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+
                 }
-                .padding(.bottom, 30)
+                // Add padding to the whole HStack
+                .padding(.horizontal)
+                // Add vertical padding
+                .padding(.vertical, 20)
+                // Add background to the HStack for the bar effect
+                .background(Color.black.opacity(0.4))
             }
         }
         .sheet(isPresented: $showImagePicker) {

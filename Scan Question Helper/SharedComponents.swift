@@ -124,4 +124,22 @@ struct ReviewCard: View {
         .background(Color.gray.opacity(0.2))
         .cornerRadius(15)
     }
+}
+
+struct ActionButton: View {
+    let icon: String
+    let color: Color
+    let isActive: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(color)
+                .opacity(isActive ? 1.0 : 0.6)
+                .scaleEffect(isActive ? 1.1 : 1.0)
+                .animation(.spring(response: 0.3), value: isActive)
+        }
+    }
 } 

@@ -11,6 +11,9 @@ struct UnifiedOnboardingView: View {
     @AppStorage("isOnboardingComplete") var isOnboardingCompleteStorage: Bool = false
     @State private var animateContent = false
     
+    // Define Neon Purple Color
+    let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
+    
     private let onboardingPages: [OnboardingPage] = [
         OnboardingPage(content: AnyView(FirstOnboardingPage())),
         OnboardingPage(content: AnyView(SecondOnboardingPage())),
@@ -65,7 +68,7 @@ struct UnifiedOnboardingView: View {
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.white)
+                            .background(neonPurple)
                             .cornerRadius(30)
                             .padding(.horizontal, 20)
                             .padding(.bottom, 40)
@@ -335,4 +338,4 @@ struct UnifiedOnboardingView_Previews: PreviewProvider {
     static var previews: some View {
         UnifiedOnboardingView()
     }
-} 
+}

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import FirebaseFirestore
 
 // MARK: - PreferenceKey for ScrollView Bottom Detection
 struct ScrollViewBottomReachedPreferenceKey: PreferenceKey {
@@ -24,6 +25,7 @@ struct MathChatView: View {
     @State private var isLoading: Bool = false
     /// The ID of the bot message currently receiving streaming text.
     @State private var currentBotMessageID: UUID? = nil
+    @State private var isBookmarked: Bool = false
     @Environment(\.presentationMode) var presentationMode
     @State private var isAtBottom: Bool = false // State to track scroll position
 
@@ -211,10 +213,22 @@ struct MathChatView: View {
         .navigationTitle("Math Solution") // Changed Title
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    isBookmarked.toggle()
+                    updateBookmarkInFirestore()
+                }) {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        .foregroundColor(isBookmarked ? neonPurple : .white)
+                }
+            }
+        }
         .preferredColorScheme(.dark) // Request dark mode for navigation bar
         .onAppear { 
             addUserImageMessage()
             fetchSolution()
+            checkBookmarkStatus()
         }
     }
     
@@ -404,6 +418,72 @@ struct MathChatView: View {
                 }
                 topController.present(activityViewController, animated: true, completion: nil)
             }
+        }
+    }
+
+    // Add new function to check bookmark status
+    private func checkBookmarkStatus() {
+        let deviceId = GlobalContent.shared.deviceId
+        guard !deviceId.starts(with: "unknown-") else { return }
+        
+        let db = Firestore.firestore()
+        let problemsRef = db.collection("solutions")
+                            .document(deviceId)
+                            .collection("problems")
+        
+        // Query for the most recent document with this image
+        if let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
+            let base64Image = imageData.base64EncodedString()
+            
+            problemsRef
+                .whereField("image", isEqualTo: base64Image)
+                .getDocuments { querySnapshot, error in
+                    if let error = error {
+                        print("Error checking bookmark status: \(error)")
+                        return
+                    }
+                    
+                    if let document = querySnapshot?.documents.first {
+                        if let bookmark = document.data()["bookmark"] as? Bool {
+                            isBookmarked = bookmark
+                        }
+                    }
+                }
+        }
+    }
+
+    // Add new function to update bookmark in Firestore
+    private func updateBookmarkInFirestore() {
+        let deviceId = GlobalContent.shared.deviceId
+        guard !deviceId.starts(with: "unknown-") else { return }
+        
+        let db = Firestore.firestore()
+        let problemsRef = db.collection("solutions")
+                            .document(deviceId)
+                            .collection("problems")
+        
+        // Find and update the document with this image
+        if let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
+            let base64Image = imageData.base64EncodedString()
+            
+            problemsRef
+                .whereField("image", isEqualTo: base64Image)
+                .getDocuments { querySnapshot, error in
+                    if let error = error {
+                        print("Error finding document to update: \(error)")
+                        return
+                    }
+                    
+                    if let document = querySnapshot?.documents.first {
+                        document.reference.updateData([
+                            "bookmark": isBookmarked
+                        ]) { error in
+                            if let error = error {
+                                print("Error updating bookmark: \(error)")
+                            }
+                        }
+                    }
+                }
         }
     }
     // --- END ADDED placeholder functions ---
