@@ -7,21 +7,6 @@ struct DiscoverView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
-                // Welcome Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Welcome to Solvo")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    
-                    Text("Your AI-powered learning assistant")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.top)
-                
                 // Study Tools Section
                 VStack(alignment: .leading, spacing: 15) {
                     SectionHeader(title: "Study Tools", subtitle: "Essential tools for your learning journey")
@@ -51,6 +36,7 @@ struct DiscoverView: View {
                     }
                 }
                 .padding(.horizontal)
+                .padding(.top)
                 
                 // Quick Actions Section
                 VStack(alignment: .leading, spacing: 15) {
@@ -170,6 +156,7 @@ struct ToolCard: View {
         .padding()
         .background(color)
         .cornerRadius(20)
+        .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -201,6 +188,7 @@ struct QuickActionButton: View {
             .padding()
             .background(color)
             .cornerRadius(15)
+            .shadow(color: color.opacity(0.3), radius: 5, x: 0, y: 3)
         }
     }
 }
@@ -225,6 +213,7 @@ struct FeaturedToolCard: View {
         .padding()
         .background(color)
         .cornerRadius(20)
+        .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -235,12 +224,11 @@ struct SectionHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
             
             Text(subtitle)
-                .font(.subheadline)
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

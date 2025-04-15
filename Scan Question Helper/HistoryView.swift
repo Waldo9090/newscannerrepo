@@ -95,22 +95,6 @@ struct HistoryView: View {
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
-            // --- Toolbar Item for Points ---
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                            .foregroundColor(neonPurple) // Use theme color
-                        Text("\(points)")
-                            .foregroundColor(.white)
-                            .font(.system(size: 14, weight: .bold))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(15)
-                }
-            }
             // Style the Navigation Bar for Dark Mode
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(darkBg, for: .navigationBar)
@@ -196,7 +180,7 @@ struct SegmentButton: View {
         }) {
             VStack(spacing: 8) { // Add spacing for underline
                 Text(title)
-                    .font(.system(size: 16, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 16, weight: .bold)) // Always bold
                     .foregroundColor(isSelected ? activeColor : inactiveColor) // Active color for text
                 
                 // Underline

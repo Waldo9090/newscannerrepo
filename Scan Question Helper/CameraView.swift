@@ -112,8 +112,6 @@ struct CameraView: View {
                 ImageCropView(image: image) { croppedImage in
                     // This runs when 'Use Photo' is tapped in ImageCropView
                     self.finalCroppedImage = croppedImage // Store final image - this will trigger the next cover
-                    // self.navigateToMathChat = true // REMOVED
-                    // showCropView will be set to false by ImageCropView dismissing itself
                 }
             }
         })
@@ -123,7 +121,6 @@ struct CameraView: View {
             NavigationStack {
                 MathChatView(selectedImage: theFinalImage)
             }
-            // No need for the else clause here, as it only shows when the item is non-nil
         }
         .onAppear {
             cameraController.checkPermissions()

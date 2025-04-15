@@ -5,8 +5,6 @@ struct ImageCropView: View {
     let onComplete: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var cropRect: CGRect
-    @State private var showCroppedPreview = false
-    @State private var croppedImage: UIImage?
     @State private var imageSize: CGSize = .zero
     @State private var imageFrame: CGRect = .zero
     @State private var isDragging = false
@@ -34,211 +32,176 @@ struct ImageCropView: View {
             ZStack {
                 Color.black.edgesIgnoringSafeArea(.all)
                 
-                if showCroppedPreview, let croppedImage = croppedImage {
-                    // Preview of cropped image
-                    VStack {
-                        Image(uiImage: croppedImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .padding()
-                        
-                        HStack(spacing: 40) {
-                            Button(action: {
-                                showCroppedPreview = false
-                            }) {
-                                Text("Recrop")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.5))
-                                    .cornerRadius(10)
-                            }
-                            
-                            Button(action: {
-                                onComplete(croppedImage)
-                                dismiss()
-                            }) {
-                                Text("Use Photo")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.purple)
-                                    .cornerRadius(10)
-                            }
+                // --- Image View (stays in background) --- 
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .background(GeometryReader { imageGeometry in
+                        Color.clear.onAppear {
+                            imageSize = imageGeometry.size
+                            imageFrame = imageGeometry.frame(in: .global)
                         }
-                        .padding(.bottom, 30)
-                    }
-                } else {
-                    // --- Image View (stays in background) --- 
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .background(GeometryReader { imageGeometry in
-                            Color.clear.onAppear {
-                                imageSize = imageGeometry.size
-                                imageFrame = imageGeometry.frame(in: .global)
-                            }
-                        })
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                // --- Crop Frame Overlay and Text (remain in ZStack) --- 
+                ZStack {
+                    // Semi-transparent overlay
+                    Rectangle()
+                        .fill(Color.black.opacity(0.5))
+                        .mask(
+                            Rectangle()
+                                .overlay(
+                                    Rectangle()
+                                        .frame(width: cropRect.width, height: cropRect.height)
+                                        .position(x: cropRect.midX, y: cropRect.midY)
+                                        .blendMode(.destinationOut)
+                                )
+                        )
                     
-                    // --- Crop Frame Overlay and Text (remain in ZStack) --- 
-                    ZStack {
-                        // Semi-transparent overlay
-                        Rectangle()
-                            .fill(Color.black.opacity(0.5))
-                            .mask(
-                                Rectangle()
-                                    .overlay(
-                                        Rectangle()
-                                            .frame(width: cropRect.width, height: cropRect.height)
-                                            .position(x: cropRect.midX, y: cropRect.midY)
-                                            .blendMode(.destinationOut)
+                    // Crop rectangle outline
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                        .frame(width: cropRect.width, height: cropRect.height)
+                        .position(x: cropRect.midX, y: cropRect.midY)
+                    
+                    // --- Text Label Positioned Above Crop Rect --- 
+                    Text("Crop only one problem")
+                        .font(.headline)
+                        .foregroundColor(neonPurple)
+                        .padding(8)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(5)
+                        // Position above the top edge of the cropRect
+                        .position(x: cropRect.midX, y: cropRect.minY - 25) 
+                    
+                    // Corner controls
+                    Group {
+                        // Top Left
+                        CornerControl(color: neonPurple)
+                            .position(x: cropRect.minX, y: cropRect.minY)
+                            .gesture(DragGesture()
+                                .onChanged { value in
+                                    let newX = min(cropRect.maxX - 100, value.location.x)
+                                    let newY = min(cropRect.maxY - 100, value.location.y)
+                                    let deltaW = cropRect.minX - newX
+                                    let deltaH = cropRect.minY - newY
+                                    cropRect = CGRect(
+                                        x: newX,
+                                        y: newY,
+                                        width: cropRect.width + deltaW,
+                                        height: cropRect.height + deltaH
                                     )
+                                }
                             )
                         
-                        // Crop rectangle outline
-                        Rectangle()
-                            .stroke(Color.white, lineWidth: 1)
-                            .frame(width: cropRect.width, height: cropRect.height)
-                            .position(x: cropRect.midX, y: cropRect.midY)
+                        // Top Right
+                        CornerControl(color: neonPurple)
+                            .position(x: cropRect.maxX, y: cropRect.minY)
+                            .gesture(DragGesture()
+                                .onChanged { value in
+                                    let newWidth = max(100, value.location.x - cropRect.minX)
+                                    let newY = min(cropRect.maxY - 100, value.location.y)
+                                    let deltaH = cropRect.minY - newY
+                                    cropRect = CGRect(
+                                        x: cropRect.minX,
+                                        y: newY,
+                                        width: newWidth,
+                                        height: cropRect.height + deltaH
+                                    )
+                                }
+                            )
                         
-                        // --- Text Label Positioned Above Crop Rect --- 
-                        Text("Crop only one problem")
-                            .font(.headline)
-                            .foregroundColor(neonPurple)
-                            .padding(8)
-                            .background(Color.black.opacity(0.6))
-                            .cornerRadius(5)
-                            // Position above the top edge of the cropRect
-                            .position(x: cropRect.midX, y: cropRect.minY - 25) 
+                        // Bottom Left
+                        CornerControl(color: neonPurple)
+                            .position(x: cropRect.minX, y: cropRect.maxY)
+                            .gesture(DragGesture()
+                                .onChanged { value in
+                                    let newX = min(cropRect.maxX - 100, value.location.x)
+                                    let newHeight = max(100, value.location.y - cropRect.minY)
+                                    let deltaW = cropRect.minX - newX
+                                    cropRect = CGRect(
+                                        x: newX,
+                                        y: cropRect.minY,
+                                        width: cropRect.width + deltaW,
+                                        height: newHeight
+                                    )
+                                }
+                            )
                         
-                        // Corner controls
-                        Group {
-                            // Top Left
-                            CornerControl(color: neonPurple)
-                                .position(x: cropRect.minX, y: cropRect.minY)
-                                .gesture(DragGesture()
-                                    .onChanged { value in
-                                        let newX = min(cropRect.maxX - 100, value.location.x)
-                                        let newY = min(cropRect.maxY - 100, value.location.y)
-                                        let deltaW = cropRect.minX - newX
-                                        let deltaH = cropRect.minY - newY
-                                        cropRect = CGRect(
-                                            x: newX,
-                                            y: newY,
-                                            width: cropRect.width + deltaW,
-                                            height: cropRect.height + deltaH
-                                        )
-                                    }
-                                )
-                            
-                            // Top Right
-                            CornerControl(color: neonPurple)
-                                .position(x: cropRect.maxX, y: cropRect.minY)
-                                .gesture(DragGesture()
-                                    .onChanged { value in
-                                        let newWidth = max(100, value.location.x - cropRect.minX)
-                                        let newY = min(cropRect.maxY - 100, value.location.y)
-                                        let deltaH = cropRect.minY - newY
-                                        cropRect = CGRect(
-                                            x: cropRect.minX,
-                                            y: newY,
-                                            width: newWidth,
-                                            height: cropRect.height + deltaH
-                                        )
-                                    }
-                                )
-                            
-                            // Bottom Left
-                            CornerControl(color: neonPurple)
-                                .position(x: cropRect.minX, y: cropRect.maxY)
-                                .gesture(DragGesture()
-                                    .onChanged { value in
-                                        let newX = min(cropRect.maxX - 100, value.location.x)
-                                        let newHeight = max(100, value.location.y - cropRect.minY)
-                                        let deltaW = cropRect.minX - newX
-                                        cropRect = CGRect(
-                                            x: newX,
-                                            y: cropRect.minY,
-                                            width: cropRect.width + deltaW,
-                                            height: newHeight
-                                        )
-                                    }
-                                )
-                            
-                            // Bottom Right
-                            CornerControl(color: neonPurple)
-                                .position(x: cropRect.maxX, y: cropRect.maxY)
-                                .gesture(DragGesture()
-                                    .onChanged { value in
-                                        let newWidth = max(100, value.location.x - cropRect.minX)
-                                        let newHeight = max(100, value.location.y - cropRect.minY)
-                                        cropRect = CGRect(
-                                            x: cropRect.minX,
-                                            y: cropRect.minY,
-                                            width: newWidth,
-                                            height: newHeight
-                                        )
-                                    }
-                                )
-                        }
+                        // Bottom Right
+                        CornerControl(color: neonPurple)
+                            .position(x: cropRect.maxX, y: cropRect.maxY)
+                            .gesture(DragGesture()
+                                .onChanged { value in
+                                    let newWidth = max(100, value.location.x - cropRect.minX)
+                                    let newHeight = max(100, value.location.y - cropRect.minY)
+                                    cropRect = CGRect(
+                                        x: cropRect.minX,
+                                        y: cropRect.minY,
+                                        width: newWidth,
+                                        height: newHeight
+                                    )
+                                }
+                            )
                     }
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                if !isDragging { 
-                                    if cropRect.contains(value.startLocation) { 
-                                         isDragging = true
-                                    }
-                                } else { 
-                                    // Apply sensitivity factor
-                                    let adjustedTranslationX = value.translation.width * dragSensitivityFactor
-                                    let adjustedTranslationY = value.translation.height * dragSensitivityFactor
-                                    
-                                    let potentialX = cropRect.origin.x + adjustedTranslationX
-                                    let potentialY = cropRect.origin.y + adjustedTranslationY
-                                    
-                                    // Boundary checks (keep these)
-                                    let clampedX = max(0, min(potentialX, geometry.size.width - cropRect.width))
-                                    let clampedY = max(0, min(potentialY, geometry.size.height - cropRect.height))
-                                    
-                                    cropRect.origin.x = clampedX
-                                    cropRect.origin.y = clampedY
+                }
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if !isDragging { 
+                                if cropRect.contains(value.startLocation) { 
+                                     isDragging = true
                                 }
-                            }
-                            .onEnded { _ in
-                                isDragging = false
-                            }
-                    )
-                    
-                    // --- Bottom Controls Overlay --- 
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 40) {
-                            Button(action: { dismiss() }) {
-                                Image(systemName: "xmark")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                    .frame(width: 60, height: 60)
-                                    .background(Color.black.opacity(0.5))
-                                    .clipShape(Circle())
-                            }
-                            
-                            Button(action: {
-                                if let cropped = cropImage() {
-                                    croppedImage = cropped
-                                    showCroppedPreview = true
-                                }
-                            }) {
-                                Image(systemName: "checkmark")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                    .frame(width: 60, height: 60)
-                                    .background(Color.purple) // Keep original purple for button
-                                    .clipShape(Circle())
+                            } else { 
+                                // Apply sensitivity factor
+                                let adjustedTranslationX = value.translation.width * dragSensitivityFactor
+                                let adjustedTranslationY = value.translation.height * dragSensitivityFactor
+                                
+                                let potentialX = cropRect.origin.x + adjustedTranslationX
+                                let potentialY = cropRect.origin.y + adjustedTranslationY
+                                
+                                // Boundary checks (keep these)
+                                let clampedX = max(0, min(potentialX, geometry.size.width - cropRect.width))
+                                let clampedY = max(0, min(potentialY, geometry.size.height - cropRect.height))
+                                
+                                cropRect.origin.x = clampedX
+                                cropRect.origin.y = clampedY
                             }
                         }
-                        .padding(.bottom, 30)
+                        .onEnded { _ in
+                            isDragging = false
+                        }
+                )
+                
+                // --- Bottom Controls Overlay --- 
+                VStack {
+                    Spacer()
+                    HStack(spacing: 40) {
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "xmark")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Circle())
+                        }
+                        
+                        Button(action: {
+                            if let cropped = cropImage() {
+                                onComplete(cropped)
+                                dismiss()
+                            }
+                        }) {
+                            Image(systemName: "checkmark")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Color.purple)
+                                .clipShape(Circle())
+                        }
                     }
+                    .padding(.bottom, 30)
                 }
             }
         }

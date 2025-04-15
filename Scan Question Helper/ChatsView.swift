@@ -16,11 +16,11 @@ struct Chat: Identifiable {
 }
 
 struct ChatsView: View {
-    @State private var chats: [Chat] = [
-        // For testing, you might add some sample chats:
-        // Uncomment the below line to test the “non-empty” state.
-        // Chat(name: "Math Tutor", icon: "plus.circle", color: .blue, subject: "Mathematics")
-    ]
+    @State private var chats: [Chat] = []
+    @State private var welcomeText = ""
+    @State private var isTyping = true
+    @State private var showCursor = true
+    let fullText = "Begin a new AI chat to get help with homework or questions.\nJust start a chat to begin!"
     
     var body: some View {
         NavigationStack {
@@ -41,11 +41,25 @@ struct ChatsView: View {
                 if chats.isEmpty {
                     VStack {
                         Spacer()
-                        Text("Begin a new AI chat to get help with homework or questions.\nJust start a chat to begin!")
-                            .font(.body)
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.gray)
-                            .padding()
+                        HStack(alignment: .top, spacing: 0) {
+                            Text(welcomeText)
+                                .font(.body)
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.gray)
+                            
+                            if isTyping {
+                                Rectangle()
+                                    .fill(Color.gray)
+                                    .frame(width: 2, height: 20)
+                                    .opacity(showCursor ? 1 : 0)
+                                    .animation(.easeInOut(duration: 0.5).repeatForever(), value: showCursor)
+                            }
+                        }
+                        .padding()
+                        .onAppear {
+                            startTypingAnimation()
+                            startCursorAnimation()
+                        }
                         
                         NavigationLink(destination: CreateChatsView(chats: $chats)
                                         .navigationBarBackButtonHidden(true)) {
@@ -74,11 +88,11 @@ struct ChatsView: View {
                                     HStack {
                                         Image(systemName: chat.icon)
                                             .foregroundColor(chat.color)
-                                            .font(.title2) // Smaller icon size
+                                            .font(.title2)
                                         
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(chat.name)
-                                                .font(.title3.weight(.semibold)) // Slightly smaller title
+                                                .font(.title3.weight(.semibold))
                                                 .foregroundColor(.white)
                                             
                                             if let subject = chat.subject {
@@ -90,21 +104,19 @@ struct ChatsView: View {
                                         
                                         Spacer()
                                         
-                                        // Right arrow indicator
                                         Image(systemName: "chevron.right")
                                             .foregroundColor(.gray)
                                     }
                                     .padding()
                                     .background(Color(UIColor.darkGray))
                                     .cornerRadius(10)
-                                    .padding(.horizontal) // Optional: adds some horizontal spacing around each cell
+                                    .padding(.horizontal)
                                 }
                             }
                         }
                         .padding(.vertical)
                     }
                     
-                    // "New Chat" button appears here as well
                     NavigationLink(destination: CreateChatsView(chats: $chats)
                                     .navigationBarBackButtonHidden(true)) {
                         Text("New Chat")
@@ -123,6 +135,31 @@ struct ChatsView: View {
                 Spacer()
             }
             .background(Color.black.ignoresSafeArea())
+        }
+    }
+    
+    private func startTypingAnimation() {
+        var charIndex = 0
+        Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { timer in
+            if charIndex < fullText.count {
+                let index = fullText.index(fullText.startIndex, offsetBy: charIndex)
+                welcomeText += String(fullText[index])
+                charIndex += 1
+            } else {
+                timer.invalidate()
+                isTyping = false
+            }
+        }
+    }
+    
+    private func startCursorAnimation() {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            withAnimation {
+                showCursor.toggle()
+            }
+            if !isTyping {
+                timer.invalidate()
+            }
         }
     }
     
