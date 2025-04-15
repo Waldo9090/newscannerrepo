@@ -34,74 +34,57 @@ struct ProblemHistoryItem: Identifiable {
 // --- END: Data Model --- 
 
 struct HistoryView: View {
-    @State private var selectedTab = 0 // 0 for All, 1 for Bookmarks
-    
-    // --- State for fetched data --- 
+    @State private var selectedTab = 0
     @State private var historyItems: [ProblemHistoryItem] = []
     @State private var isLoadingHistory: Bool = false
     @State private var fetchError: String? = nil
     
-    // --- Define Colors using Neon Purple ---
+    // Define Colors
     let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
     let darkBg = Color.black
-    let activeTabColor = Color(red: 0.6, green: 0.0, blue: 1.0) // Neon Purple for active tab
+    let activeTabColor = Color(red: 0.6, green: 0.0, blue: 1.0)
     let inactiveTabColor = Color.gray
-    let cardBackgroundColor = Color.white.opacity(0.1)
-    let accentGradient = LinearGradient(gradient: Gradient(colors: [Color(red: 0.6, green: 0.0, blue: 1.0), Color.purple.opacity(0.6)]), startPoint: .topLeading, endPoint: .bottomTrailing) // Purple Gradient
-
-    // Placeholder for points - replace with actual data source later
-    @State private var points: Int = 0
-
+    
     var body: some View {
         NavigationView {
-            ZStack {
-                darkBg.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // --- Custom Segmented Control (Tabs at Top) ---
-                    HStack(spacing: 0) {
-                        SegmentButton(title: "All", tag: 0, selection: $selectedTab, activeColor: activeTabColor, inactiveColor: inactiveTabColor)
-                        SegmentButton(title: "Bookmarks", tag: 1, selection: $selectedTab, activeColor: activeTabColor, inactiveColor: inactiveTabColor)
-                    }
-                    .padding(.horizontal)
-                    
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
-                        .padding(.top, 5)
-                    
-                    // --- Content Area ---
-                    TabView(selection: $selectedTab) {
-                        // Pass ALL history items to the All tab
-                        HistoryContentView(
-                            historyItems: historyItems, // <-- Pass the unfiltered list
-                            isLoading: isLoadingHistory,
-                            error: fetchError,
-                            tabType: .all
-                        )
-                        .tag(0)
-                        
-                        // Bookmarks tab - Keep the filter here
-                        HistoryContentView(
-                            historyItems: historyItems.filter { $0.isBookmarked },
-                            isLoading: isLoadingHistory,
-                            error: fetchError,
-                            tabType: .bookmarks
-                        )
-                        .tag(1)
-                    }
-                    
-                    Spacer()
+            VStack(spacing: 0) {
+                // Custom Segmented Control
+                HStack(spacing: 0) {
+                    SegmentButton(title: "All", tag: 0, selection: $selectedTab, activeColor: activeTabColor, inactiveColor: inactiveTabColor)
+                    SegmentButton(title: "Bookmarks", tag: 1, selection: $selectedTab, activeColor: activeTabColor, inactiveColor: inactiveTabColor)
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(darkBg)
+                
+                // Content Area
+                TabView(selection: $selectedTab) {
+                    HistoryContentView(
+                        historyItems: historyItems,
+                        isLoading: isLoadingHistory,
+                        error: fetchError,
+                        tabType: .all
+                    )
+                    .tag(0)
+                    
+                    HistoryContentView(
+                        historyItems: historyItems.filter { $0.isBookmarked },
+                        isLoading: isLoadingHistory,
+                        error: fetchError,
+                        tabType: .bookmarks
+                    )
+                    .tag(1)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
+            .background(darkBg)
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
-            // Style the Navigation Bar for Dark Mode
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(darkBg, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
         }
         .onAppear {
-            // Fetch history when the view appears
             fetchHistory()
         }
     }
@@ -178,20 +161,17 @@ struct SegmentButton: View {
                 selection = tag
             }
         }) {
-            VStack(spacing: 8) { // Add spacing for underline
+            VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 16, weight: .bold)) // Always bold
-                    .foregroundColor(isSelected ? activeColor : inactiveColor) // Active color for text
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(isSelected ? activeColor : inactiveColor)
                 
-                // Underline
                 Rectangle()
-                    .fill(isSelected ? activeColor : Color.clear) // Show underline only if selected
+                    .fill(isSelected ? activeColor : Color.clear)
                     .frame(height: 2)
             }
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle()) // Ensure whole area is tappable
         }
-        .buttonStyle(.plain) // Remove default button styling
     }
 }
 
@@ -207,131 +187,58 @@ struct HistoryContentView: View {
     @State private var selectedItem: ProblemHistoryItem?
     @State private var showingDetail = false
     
-    // Function to toggle bookmark
-    func toggleBookmark(for itemId: String) {
-        let db = Firestore.firestore()
-        let deviceId = GlobalContent.shared.deviceId
-
-        let docRef = db.collection("solutions").document(deviceId)
-            .collection("problems").document(itemId)
-        
-        docRef.getDocument { (document, error) in
-            if let document = document, document.exists {
-                let currentBookmarkState = document.data()?["bookmark"] as? Bool ?? false
-                docRef.updateData([
-                    "bookmark": !currentBookmarkState
-                ]) { err in
-                    if let err = err {
-                        print("Error updating bookmark: \(err)")
-                    } else {
-                        print("Bookmark status updated successfully for \(itemId)")
-                    }
-                }
-            }
-        }
-    }
-    
     var body: some View {
-        if isLoading {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                .scaleEffect(1.5)
-        } else {
-            if let errorMessage = error {
-                Text(errorMessage)
-                    .foregroundColor(.red)
+        Group {
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+            } else if let errorMessage = error {
+                ErrorView(message: errorMessage)
             } else if historyItems.isEmpty {
                 EmptyStateView(tabType: tabType)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         ForEach(historyItems) { item in
-                            VStack(alignment: .leading, spacing: 12) {
-                                if let image = item.image {
-                                    Image(uiImage: image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 200)
-                                        .cornerRadius(12)
-                                        .clipped()
+                            HistoryCard(item: item)
+                                .onTapGesture {
+                                    selectedItem = item
+                                    showingDetail = true
                                 }
-                                
-                                Text(item.solution)
-                                    .lineLimit(3)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white)
-                                
-                                HStack {
-                                    Label(
-                                        timeAgoString(from: item.timestamp),
-                                        systemImage: "clock"
-                                    )
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    
-                                    Spacer()
-                                    
-                                    Button(action: {
-                                        toggleBookmark(for: item.id)
-                                    }) {
-                                        Image(systemName: item.isBookmarked ? "bookmark.fill" : "bookmark")
-                                            .foregroundColor(item.isBookmarked ? .yellow : .gray)
-                                            .font(.system(size: 18))
-                                    }
-                                }
-                            }
-                            .padding(16)
-                            .background(Color.black)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                            )
-                            .cornerRadius(16)
-                            .onTapGesture {
-                                selectedItem = item
-                                showingDetail = true
-                            }
                         }
                     }
                     .padding()
                 }
-                .background(Color.black)
-                .sheet(isPresented: $showingDetail) {
-                    if let selectedItem = selectedItem {
-                        HistoryDetailView(item: selectedItem)
-                    }
-                }
             }
         }
-    }
-    
-    private func timeAgoString(from date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
+        .sheet(isPresented: $showingDetail) {
+            if let selectedItem = selectedItem {
+                HistoryDetailView(item: selectedItem)
+            }
+        }
     }
 }
 
 struct HistoryCard: View {
     let item: ProblemHistoryItem
-    let themeColor: Color
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let uiImage = item.image {
-                Image(uiImage: uiImage)
+            if let image = item.image {
+                Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 160)
-                    .clipped()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 200)
                     .cornerRadius(12)
+                    .clipped()
             }
             
             VStack(alignment: .leading, spacing: 8) {
                 Text(item.solution)
                     .lineLimit(2)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 16))
                     .foregroundColor(.white)
                 
                 HStack {
@@ -339,14 +246,14 @@ struct HistoryCard: View {
                         timeAgoString(from: item.timestamp),
                         systemImage: "clock"
                     )
-                    .font(.system(size: 13))
+                    .font(.caption)
                     .foregroundColor(.gray)
                     
                     Spacer()
                     
                     if item.isBookmarked {
                         Image(systemName: "bookmark.fill")
-                            .foregroundColor(themeColor)
+                            .foregroundColor(.purple)
                     }
                 }
             }
@@ -359,7 +266,6 @@ struct HistoryCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: themeColor.opacity(0.1), radius: 8, x: 0, y: 4)
     }
     
     private func timeAgoString(from date: Date) -> String {
@@ -369,25 +275,28 @@ struct HistoryCard: View {
     }
 }
 
-struct LoadingView: View {
-    @State private var isAnimating = false
+struct EmptyStateView: View {
+    let tabType: HistoryTabType
     
     var body: some View {
-        VStack(spacing: 20) {
-            Circle()
-                .trim(from: 0, to: 0.7)
-                .stroke(Color(red: 0.6, green: 0.0, blue: 1.0), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .frame(width: 50, height: 50)
-                .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                .animation(Animation.linear(duration: 1).repeatForever(autoreverses: false), value: isAnimating)
+        VStack(spacing: 24) {
+            Image(systemName: tabType == .all ? "clock.fill" : "bookmark.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.purple)
             
-            Text("Loading...")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.gray)
+            VStack(spacing: 8) {
+                Text(tabType == .all ? "No History Yet" : "No Bookmarks")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text(tabType == .all ? "Your solved problems will appear here" : "Save your favorite solutions for quick access")
+                    .font(.system(size: 16))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
         }
-        .onAppear {
-            isAnimating = true
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -413,55 +322,8 @@ struct ErrorView: View {
     }
 }
 
-struct EmptyStateView: View {
-    let tabType: HistoryTabType
-    let themeColor = Color(red: 0.6, green: 0.0, blue: 1.0)
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(themeColor.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: tabType == .all ? "clock.fill" : "bookmark.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(themeColor)
-            }
-            
-            VStack(spacing: 8) {
-                Text(tabType == .all ? "No History Yet" : "No Bookmarks")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                Text(tabType == .all ? "Your solved problems will appear here" : "Save your favorite solutions for quick access")
-                    .font(.system(size: 16))
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-            
-            if tabType == .bookmarks {
-                Button(action: {}) {
-                    HStack(spacing: 8) {
-                        Text("Start Solving")
-                        Image(systemName: "arrow.right")
-                    }
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(themeColor)
-                    .cornerRadius(20)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
-    }
-}
+// --- MODIFIED: HistoryDetailView ---
 
-// --- MODIFIED: HistoryDetailView --- 
 struct HistoryDetailView: View {
     let item: ProblemHistoryItem
     @Environment(\.dismiss) private var dismiss
@@ -520,10 +382,9 @@ struct HistoryDetailView: View {
 }
 
 // MARK: - Preview
-
 struct HistoryView_Previews: PreviewProvider {
     static var previews: some View {
         HistoryView()
             .preferredColorScheme(.dark)
     }
-} 
+}

@@ -13,6 +13,9 @@ struct Chat: Identifiable {
     let icon: String
     let color: Color
     let subject: String? // Optional, for subject-specific chats
+    @State var lastMessage: String = ""
+    @State var isTyping: Bool = false
+    @State var showCursor: Bool = true
 }
 
 struct ChatsView: View {
@@ -100,6 +103,23 @@ struct ChatsView: View {
                                                     .font(.subheadline)
                                                     .foregroundColor(.gray)
                                             }
+                                            
+                                            if chat.isTyping {
+                                                HStack(alignment: .top, spacing: 0) {
+                                                    Text(chat.lastMessage)
+                                                        .font(.caption)
+                                                        .foregroundColor(.gray)
+                                                    
+                                                    Rectangle()
+                                                        .fill(Color.gray)
+                                                        .frame(width: 2, height: 12)
+                                                        .opacity(chat.showCursor ? 1 : 0)
+                                                        .animation(.easeInOut(duration: 0.5).repeatForever(), value: chat.showCursor)
+                                                }
+                                                .onAppear {
+                                                    startCursorAnimation(for: chat)
+                                                }
+                                            }
                                         }
                                         
                                         Spacer()
@@ -158,6 +178,17 @@ struct ChatsView: View {
                 showCursor.toggle()
             }
             if !isTyping {
+                timer.invalidate()
+            }
+        }
+    }
+    
+    private func startCursorAnimation(for chat: Chat) {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            withAnimation {
+                chat.showCursor.toggle()
+            }
+            if !chat.isTyping {
                 timer.invalidate()
             }
         }

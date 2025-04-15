@@ -94,23 +94,35 @@ struct DiscoverView: View {
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 15) {
-                            FeaturedToolCard(
-                                title: "Step-by-Step Solutions",
-                                icon: "list.bullet.rectangle",
-                                color: Color(hex: "#FF9F1C")
-                            )
+                            Button(action: {
+                                showChatView = true
+                            }) {
+                                FeaturedToolCard(
+                                    title: "Step-by-Step Solutions",
+                                    icon: "list.bullet.rectangle",
+                                    color: Color(hex: "#FF9F1C")
+                                )
+                            }
                             
-                            FeaturedToolCard(
-                                title: "Practice Questions",
-                                icon: "pencil.and.outline",
-                                color: Color(hex: "#2EC4B6")
-                            )
+                            Button(action: {
+                                showChatView = true
+                            }) {
+                                FeaturedToolCard(
+                                    title: "Practice Questions",
+                                    icon: "pencil.and.outline",
+                                    color: Color(hex: "#2EC4B6")
+                                )
+                            }
                             
-                            FeaturedToolCard(
-                                title: "Study Notes",
-                                icon: "note.text",
-                                color: Color(hex: "#E71D36")
-                            )
+                            Button(action: {
+                                showChatView = true
+                            }) {
+                                FeaturedToolCard(
+                                    title: "Study Notes",
+                                    icon: "note.text",
+                                    color: Color(hex: "#E71D36")
+                                )
+                            }
                         }
                         .padding(.horizontal)
                     }

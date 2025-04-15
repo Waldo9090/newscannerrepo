@@ -2,92 +2,63 @@ import SwiftUI
 
 struct ProfileView: View {
     @State private var showCameraView = false
+    let deviceId = GlobalContent.shared.deviceId
     
     var body: some View {
-        VStack(spacing: 20) {
-            // Profile Header
-            VStack(spacing: 15) {
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.purple)
-                
-                Text("Guest User")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Text("Sign in to access all features")
-                    .foregroundColor(.gray)
-            }
-            .padding(.top, 40)
-            
-            // Stats Section
-            HStack(spacing: 30) {
-                StatItem(value: "0", title: "Solutions")
-                StatItem(value: "0", title: "Bookmarks")
-                StatItem(value: "0", title: "Points")
-            }
-            .padding(.vertical, 20)
-            
-            // Action Buttons
-            VStack(spacing: 15) {
-                Button(action: {
-                    showCameraView = true
-                }) {
-                    ActionButton(title: "Smart Scanner", icon: "viewfinder", action: {})
+        List {
+            // Device ID Section
+            Section {
+                HStack {
+                    Text("Device ID")
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text(deviceId)
+                        .foregroundColor(.gray)
+                        .font(.system(.body, design: .monospaced))
                 }
-                ActionButton(title: "Settings", icon: "gear", action: {})
-                ActionButton(title: "Help Center", icon: "questionmark.circle", action: {})
-                ActionButton(title: "About", icon: "info.circle", action: {})
-            }
-            .padding()
-            
-            Spacer()
-        }
-        .background(Color.black)
-        .navigationTitle("Profile")
-        .fullScreenCover(isPresented: $showCameraView) {
-            CameraView()
-        }
-    }
-}
-
-struct StatItem: View {
-    let value: String
-    let title: String
-    
-    var body: some View {
-        VStack(spacing: 5) {
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-    }
-}
-
-struct ActionButton: View {
-    let title: String
-    let icon: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.purple)
-                    .frame(width: 30)
-                Text(title)
-                    .foregroundColor(.white)
-                Spacer()
-                Image(systemName: "chevron.right")
+            } header: {
+                Text("Device Information")
                     .foregroundColor(.gray)
             }
-            .padding()
-            .background(Color.gray.opacity(0.2))
-            .cornerRadius(10)
+            
+            // Settings Section
+            Section {
+                NavigationLink(destination: Text("Terms of Use")) {
+                    HStack {
+                        Image(systemName: "doc.text")
+                            .foregroundColor(.purple)
+                        Text("Terms of Use")
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                NavigationLink(destination: Text("Privacy Policy")) {
+                    HStack {
+                        Image(systemName: "lock.shield")
+                            .foregroundColor(.purple)
+                        Text("Privacy Policy")
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                NavigationLink(destination: Text("Contact Us")) {
+                    HStack {
+                        Image(systemName: "envelope")
+                            .foregroundColor(.purple)
+                        Text("Contact Us")
+                            .foregroundColor(.white)
+                    }
+                }
+            } header: {
+                Text("Settings")
+                    .foregroundColor(.gray)
+            }
         }
+        .listStyle(InsetGroupedListStyle())
+        .background(Color.black)
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(.dark)
     }
 }
 

@@ -14,7 +14,7 @@ class ChatViewModel: ObservableObject {
     init() {
         let initialMessage = MathChatMessage(
             role: "assistant",
-            content: "Hi! I'm your math assistant. Ask me any math question, and I'll help you solve it step by step."
+            content: "Hi! I'm your AI tutor assistant. What do you need help with?"
         )
         self.messages = [initialMessage]
     }

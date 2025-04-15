@@ -97,56 +97,53 @@ struct MathChatView: View {
                             
                             // --- ADDED: Action Buttons --- 
                             HStack(spacing: 25) { // Adjust spacing as needed
-                                Spacer() // Push buttons to the right initially, or distribute with spacers
-                                
-                                Button(action: { 
-                                    // TODO: Implement Regenerate Action
-                                    print("Regenerate tapped")
-                                    regenerateSolution()
-                                }) { 
-                                    Image(systemName: "arrow.clockwise")
-                                        .font(.title2)
-                                        .foregroundColor(.gray)
+                                // Left side buttons
+                                HStack(spacing: 15) {
+                                    Button(action: { 
+                                        regenerateSolution()
+                                    }) { 
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.title2)
+                                            .foregroundColor(.gray)
+                                    }
+                                    
+                                    Button(action: { 
+                                        print("Thumbs Up tapped")
+                                    }) { 
+                                        Image(systemName: "hand.thumbsup")
+                                            .font(.title2)
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                                 
-                                Button(action: { 
-                                    // TODO: Implement Thumbs Up Action
-                                    print("Thumbs Up tapped")
-                                }) { 
-                                    Image(systemName: "hand.thumbsup")
-                                        .font(.title2)
-                                        .foregroundColor(.gray)
-                                }
+                                Spacer()
                                 
-                                Button(action: { 
-                                    // TODO: Implement Thumbs Down Action
-                                    print("Thumbs Down tapped")
-                                }) { 
-                                    Image(systemName: "hand.thumbsdown")
-                                        .font(.title2)
-                                        .foregroundColor(.gray)
+                                // Right side buttons
+                                HStack(spacing: 15) {
+                                    Button(action: { 
+                                        print("Thumbs Down tapped")
+                                    }) { 
+                                        Image(systemName: "hand.thumbsdown")
+                                            .font(.title2)
+                                            .foregroundColor(.gray)
+                                    }
+                                    
+                                    Button(action: { 
+                                        copySolutionToClipboard()
+                                    }) { 
+                                        Image(systemName: "doc.on.doc")
+                                            .font(.title2)
+                                            .foregroundColor(.gray)
+                                    }
+                                    
+                                    Button(action: { 
+                                        shareSolution()
+                                    }) { 
+                                        Image(systemName: "square.and.arrow.up")
+                                            .font(.title2)
+                                            .foregroundColor(.gray)
+                                    }
                                 }
-                                
-                                Button(action: { 
-                                    // TODO: Implement Copy Action
-                                    copySolutionToClipboard()
-                                    print("Copy tapped")
-                                }) { 
-                                    Image(systemName: "doc.on.doc") // Copy icon
-                                        .font(.title2)
-                                        .foregroundColor(.gray)
-                                }
-                                
-                                Button(action: { 
-                                    // TODO: Implement Share Action
-                                    shareSolution()
-                                    print("Share tapped")
-                                }) { 
-                                    Image(systemName: "square.and.arrow.up") // Share icon
-                                        .font(.title2)
-                                        .foregroundColor(.gray)
-                                }
-                                Spacer() // Balance spacer
                             }
                             .padding(.horizontal) // Padding for the button row
                             .padding(.top, 5) // Space above the buttons

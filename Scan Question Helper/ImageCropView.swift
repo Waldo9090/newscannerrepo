@@ -11,8 +11,8 @@ struct ImageCropView: View {
     
     // Define Neon Purple Color
     let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
-    // Increase sensitivity slightly for better responsiveness
-    let dragSensitivityFactor: CGFloat = 0.4
+    // Reduce sensitivity for smoother dragging
+    let dragSensitivityFactor: CGFloat = 0.25 // Reduced from 0.4
     
     init(image: UIImage, onComplete: @escaping (UIImage) -> Void) {
         self.image = image
@@ -72,8 +72,7 @@ struct ImageCropView: View {
                         .padding(8)
                         .background(Color.black.opacity(0.6))
                         .cornerRadius(5)
-                        // Position above the top edge of the cropRect
-                        .position(x: cropRect.midX, y: cropRect.minY - 25) 
+                        .position(x: cropRect.midX, y: cropRect.minY - 25)
                     
                     // Corner controls
                     Group {
@@ -151,22 +150,24 @@ struct ImageCropView: View {
                         .onChanged { value in
                             if !isDragging { 
                                 if cropRect.contains(value.startLocation) { 
-                                     isDragging = true
+                                    isDragging = true
                                 }
                             } else { 
-                                // Apply sensitivity factor
+                                // Apply reduced sensitivity factor
                                 let adjustedTranslationX = value.translation.width * dragSensitivityFactor
                                 let adjustedTranslationY = value.translation.height * dragSensitivityFactor
                                 
                                 let potentialX = cropRect.origin.x + adjustedTranslationX
                                 let potentialY = cropRect.origin.y + adjustedTranslationY
                                 
-                                // Boundary checks (keep these)
+                                // Boundary checks with smoother movement
                                 let clampedX = max(0, min(potentialX, geometry.size.width - cropRect.width))
                                 let clampedY = max(0, min(potentialY, geometry.size.height - cropRect.height))
                                 
-                                cropRect.origin.x = clampedX
-                                cropRect.origin.y = clampedY
+                                withAnimation(.interactiveSpring()) {
+                                    cropRect.origin.x = clampedX
+                                    cropRect.origin.y = clampedY
+                                }
                             }
                         }
                         .onEnded { _ in
