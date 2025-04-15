@@ -3,7 +3,6 @@ import SwiftUI
 struct ChatListView: View {
     @State private var showNewChat = false
     @State private var messageText = ""
-    @State private var showChatView = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -66,35 +65,23 @@ struct ChatListView: View {
                     
                     // Task options
                     VStack(alignment: .leading, spacing: 12) {
-                        Button(action: {
-                            showChatView = true
-                        }) {
-                            TaskButton(
-                                title: "Write",
-                                icon: "pencil",
-                                color: .yellow
-                            )
-                        }
+                        TaskButton(
+                            title: "Write",
+                            icon: "pencil",
+                            color: .yellow
+                        )
                         
-                        Button(action: {
-                            showChatView = true
-                        }) {
-                            TaskButton(
-                                title: "Improve",
-                                icon: "pencil.and.outline",
-                                color: .pink
-                            )
-                        }
+                        TaskButton(
+                            title: "Improve",
+                            icon: "pencil.and.outline",
+                            color: .pink
+                        )
                         
-                        Button(action: {
-                            showChatView = true
-                        }) {
-                            TaskButton(
-                                title: "Summarize",
-                                icon: "text.book.closed",
-                                color: .orange
-                            )
-                        }
+                        TaskButton(
+                            title: "Summarize",
+                            icon: "text.book.closed",
+                            color: .orange
+                        )
                     }
                     .padding(.horizontal)
                 }
@@ -128,11 +115,6 @@ struct ChatListView: View {
         }
         .background(Color.black)
         .sheet(isPresented: $showNewChat) {
-            NavigationStack {
-                ChatDetailView()
-            }
-        }
-        .fullScreenCover(isPresented: $showChatView) {
             NavigationStack {
                 ChatDetailView()
             }

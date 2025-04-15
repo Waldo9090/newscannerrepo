@@ -11,21 +11,26 @@ import SuperwallKit
 struct TabBarView: View {
     @State private var selectedTab: Int = 0
     @State private var showCameraView = false
+    // Add haptic feedback generator
+    private let hapticFeedback = UIImpactFeedbackGenerator(style: .light)
     
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
-                // Discover Tab
+                // Explore Tab
                 NavigationStack {
                     DiscoverView()
                 }
                 .tabItem {
                     VStack {
-                        Image(systemName: selectedTab == 0 ? "square.stack.fill" : "square.stack")
-                        Text("Discover")
+                        Image(systemName: selectedTab == 0 ? "safari.fill" : "safari")
+                        Text("Explore")
                     }
                 }
                 .tag(0)
+                .onTapGesture {
+                    hapticFeedback.impactOccurred()
+                }
                 
                 // Chat Tab
                 NavigationStack {
@@ -38,6 +43,9 @@ struct TabBarView: View {
                     }
                 }
                 .tag(1)
+                .onTapGesture {
+                    hapticFeedback.impactOccurred()
+                }
                 
                 // History Tab
                 NavigationStack {
@@ -50,6 +58,9 @@ struct TabBarView: View {
                     }
                 }
                 .tag(2)
+                .onTapGesture {
+                    hapticFeedback.impactOccurred()
+                }
                 
                 // Profile Tab
                 NavigationStack {
@@ -57,11 +68,14 @@ struct TabBarView: View {
                 }
                 .tabItem {
                     VStack {
-                        Image(systemName: selectedTab == 3 ? "person.fill" : "person")
-                        Text("Profile")
+                        Image(systemName: selectedTab == 3 ? "gear.fill" : "gear")
+                        Text("Settings")
                     }
                 }
                 .tag(3)
+                .onTapGesture {
+                    hapticFeedback.impactOccurred()
+                }
             }
             .accentColor(.purple)
             .onAppear {
@@ -77,6 +91,7 @@ struct TabBarView: View {
             
             // Custom center scan button overlay
             Button(action: {
+                hapticFeedback.impactOccurred()
                 showCameraView = true
             }) {
                 ZStack {
@@ -92,7 +107,7 @@ struct TabBarView: View {
             }
             .offset(y: -30)
             .fullScreenCover(isPresented: $showCameraView) {
-                CameraView()
+                ScanView()
             }
         }
     }

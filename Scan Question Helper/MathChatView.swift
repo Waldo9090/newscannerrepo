@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import FirebaseFirestore
+import WebKit
 
 // MARK: - PreferenceKey for ScrollView Bottom Detection
 struct ScrollViewBottomReachedPreferenceKey: PreferenceKey {
@@ -26,6 +27,9 @@ struct MathChatView: View {
     /// The ID of the bot message currently receiving streaming text.
     @State private var currentBotMessageID: UUID? = nil
     @State private var isBookmarked: Bool = false
+    @State private var showCopiedNotification: Bool = false
+    @State private var isThumbsUpPressed: Bool = false
+    @State private var isThumbsDownPressed: Bool = false
     @Environment(\.presentationMode) var presentationMode
     @State private var isAtBottom: Bool = false // State to track scroll position
 
@@ -108,11 +112,14 @@ struct MathChatView: View {
                                     }
                                     
                                     Button(action: { 
-                                        print("Thumbs Up tapped")
+                                        isThumbsUpPressed.toggle()
+                                        if isThumbsUpPressed {
+                                            isThumbsDownPressed = false
+                                        }
                                     }) { 
-                                        Image(systemName: "hand.thumbsup")
+                                        Image(systemName: isThumbsUpPressed ? "hand.thumbsup.fill" : "hand.thumbsup")
                                             .font(.title2)
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(isThumbsUpPressed ? .green : .gray)
                                     }
                                 }
                                 
@@ -121,11 +128,14 @@ struct MathChatView: View {
                                 // Right side buttons
                                 HStack(spacing: 15) {
                                     Button(action: { 
-                                        print("Thumbs Down tapped")
+                                        isThumbsDownPressed.toggle()
+                                        if isThumbsDownPressed {
+                                            isThumbsUpPressed = false
+                                        }
                                     }) { 
-                                        Image(systemName: "hand.thumbsdown")
+                                        Image(systemName: isThumbsDownPressed ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                                             .font(.title2)
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(isThumbsDownPressed ? .red : .gray)
                                     }
                                     
                                     Button(action: { 
@@ -177,6 +187,26 @@ struct MathChatView: View {
                 }
             } // End ScrollViewReader
             
+            // --- ADDED: Copied Notification ---
+            if showCopiedNotification {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "doc.on.doc.fill")
+                            .foregroundColor(.white)
+                        Text("Copied to clipboard")
+                            .foregroundColor(.white)
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.8))
+                    .cornerRadius(10)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.3))
+                .transition(.opacity)
+            }
+
             // --- Conditional Bottom Button --- 
             VStack { 
                 Spacer() // Pushes to bottom
@@ -243,19 +273,33 @@ struct MathChatView: View {
             if message.isUser {
                 Text(text)
                     .padding()
-                    .background(Color.orange.opacity(0.2))
+                    .background(Color.orange.opacity(0.3))
                     .foregroundColor(.black)
                     .cornerRadius(10)
                     .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
             } else {
-                // --- Assistant message styling with individual background --- 
-                Text(text)
-                    .padding()
-                    // Apply background here instead of container
-                    .background(Color.gray.opacity(0.2)) 
-                    .foregroundColor(Color.white.opacity(0.9))
-                    .cornerRadius(10)
-                    .frame(maxWidth: .infinity, alignment: .leading) // Ensure it takes width
+                // Split text by $$ delimiters to handle LaTeX equations
+                let parts = text.components(separatedBy: "$$")
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(0..<parts.count, id: \.self) { index in
+                        if index % 2 == 0 {
+                            // Regular text - style blurb in darker gray
+                            Text(parts[index])
+                                .foregroundColor(.white)
+                                .font(.system(size: 16))
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            // LaTeX equation
+                            LaTeXView(equation: "$$\(parts[index])$$")
+                                .frame(height: 100)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                }
+                .padding()
+                .background(Color.black)
+                .cornerRadius(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -284,12 +328,10 @@ struct MathChatView: View {
         // --- Load API Key using shared function ---
         guard let apiKey = loadAPIKey() else {
             updateBotMessage(with: "API Key not found. Please check Secrets.plist.")
-            // Ensure loading state is reset if key loading fails
             isLoading = false
             currentBotMessageID = nil
             return
         }
-        // --- End Load API Key ---
         
         isLoading = true
         
@@ -333,12 +375,11 @@ struct MathChatView: View {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        // Use the loaded apiKey from Secrets.plist via loadAPIKey()
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let body: [String: Any] = [
-            "model": "gpt-4o",  // Use vision-capable model
+            "model": "gpt-4o",
             "messages": apiMessages,
             "temperature": 0.2,
             "stream": true
@@ -353,15 +394,28 @@ struct MathChatView: View {
         
         // Use the globally accessible StreamingDelegate
         let delegate = StreamingDelegate { chunk in
-            // Append each chunk to the bot message text.
-            if let index = messages.firstIndex(where: { $0.id == self.currentBotMessageID }) {
-                // Use self explicitly in closure
-                self.messages[index].text = (self.messages[index].text ?? "") + chunk
+            // Log the chunk to console
+            print("GPT Response Chunk: \(chunk)")
+            
+            // Update the message content immediately with each chunk
+            DispatchQueue.main.async {
+                if let index = self.messages.firstIndex(where: { $0.id == self.currentBotMessageID }) {
+                    self.messages[index].text = (self.messages[index].text ?? "") + chunk
+                }
             }
         } onCompletion: {
-            // Use self explicitly in closure
-            self.isLoading = false
-            self.currentBotMessageID = nil
+            // Log completion
+            print("GPT Response Complete")
+            
+            DispatchQueue.main.async {
+                self.isLoading = false
+                self.currentBotMessageID = nil
+                
+                // After completion, save to Firestore
+                if let solution = self.messages.last?.text {
+                    self.saveToFirestore(image: self.selectedImage, solution: solution)
+                }
+            }
         }
         
         let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
@@ -395,7 +449,15 @@ struct MathChatView: View {
         let solutionText = messages.filter { !$0.isUser }.compactMap { $0.text }.joined(separator: "\n\n")
         if !solutionText.isEmpty {
             UIPasteboard.general.string = solutionText
-            // Optionally show a confirmation to the user
+            withAnimation {
+                showCopiedNotification = true
+            }
+            // Hide notification after 2 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    showCopiedNotification = false
+                }
+            }
         }
     }
 
@@ -483,7 +545,107 @@ struct MathChatView: View {
                 }
         }
     }
+
+    private func saveToFirestore(image: UIImage, solution: String) {
+        let deviceId = GlobalContent.shared.deviceId
+        guard !deviceId.starts(with: "unknown-") else { return }
+        
+        let db = Firestore.firestore()
+        let problemsRef = db.collection("solutions")
+                            .document(deviceId)
+                            .collection("problems")
+        
+        // Convert image to base64
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+        let base64Image = imageData.base64EncodedString()
+        
+        // Create a new document with a unique ID
+        let problemId = UUID().uuidString
+        let problemData: [String: Any] = [
+            "image": base64Image,
+            "solution": solution,
+            "timestamp": Timestamp(date: Date()),
+            "bookmark": false
+        ]
+        
+        problemsRef.document(problemId).setData(problemData) { error in
+            if let error = error {
+                print("Error saving to Firestore: \(error)")
+            } else {
+                print("Successfully saved solution to Firestore")
+            }
+        }
+    }
+
     // --- END ADDED placeholder functions ---
+}
+
+// Update LaTeXView component
+struct LaTeXView: UIViewRepresentable {
+    let equation: String
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
+        webView.backgroundColor = .clear
+        webView.isOpaque = false
+        return webView
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        let html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    color: white;
+                    font-size: 16px;
+                }
+                .container {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100px;
+                    padding: 10px;
+                }
+                .math {
+                    font-size: 1.2em;
+                    text-align: center;
+                }
+                .MathJax {
+                    color: white !important;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="math">
+                    \(equation)
+                </div>
+            </div>
+            <script>
+                MathJax.typesetPromise().then(() => {
+                    // Ensure equations are properly centered and styled
+                    document.querySelectorAll('.MathJax').forEach(el => {
+                        el.style.color = 'white';
+                        el.style.display = 'block';
+                        el.style.margin = '0 auto';
+                    });
+                });
+            </script>
+        </body>
+        </html>
+        """
+        uiView.loadHTMLString(html, baseURL: nil)
+    }
 }
 
 // MARK: - Preview

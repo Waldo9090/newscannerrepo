@@ -8,11 +8,12 @@ struct ImageCropView: View {
     @State private var imageSize: CGSize = .zero
     @State private var imageFrame: CGRect = .zero
     @State private var isDragging = false
+    @State private var lastDragLocation: CGPoint = .zero
     
     // Define Neon Purple Color
     let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
-    // Reduce sensitivity for smoother dragging
-    let dragSensitivityFactor: CGFloat = 0.25 // Reduced from 0.4
+    // Increased sensitivity for more responsive dragging
+    let dragSensitivityFactor: CGFloat = 0.5 // Increased from 0.1
     
     init(image: UIImage, onComplete: @escaping (UIImage) -> Void) {
         self.image = image
@@ -148,26 +149,34 @@ struct ImageCropView: View {
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            if !isDragging { 
-                                if cropRect.contains(value.startLocation) { 
+                            if !isDragging {
+                                if cropRect.contains(value.startLocation) {
                                     isDragging = true
+                                    lastDragLocation = value.location
                                 }
-                            } else { 
-                                // Apply reduced sensitivity factor
-                                let adjustedTranslationX = value.translation.width * dragSensitivityFactor
-                                let adjustedTranslationY = value.translation.height * dragSensitivityFactor
+                            } else {
+                                // Calculate the difference from the last drag location
+                                let deltaX = value.location.x - lastDragLocation.x
+                                let deltaY = value.location.y - lastDragLocation.y
                                 
-                                let potentialX = cropRect.origin.x + adjustedTranslationX
-                                let potentialY = cropRect.origin.y + adjustedTranslationY
+                                // Apply increased sensitivity factor
+                                let adjustedDeltaX = deltaX * dragSensitivityFactor
+                                let adjustedDeltaY = deltaY * dragSensitivityFactor
                                 
-                                // Boundary checks with smoother movement
-                                let clampedX = max(0, min(potentialX, geometry.size.width - cropRect.width))
-                                let clampedY = max(0, min(potentialY, geometry.size.height - cropRect.height))
+                                // Calculate new position with direct movement
+                                let newX = cropRect.origin.x + adjustedDeltaX
+                                let newY = cropRect.origin.y + adjustedDeltaY
                                 
-                                withAnimation(.interactiveSpring()) {
-                                    cropRect.origin.x = clampedX
-                                    cropRect.origin.y = clampedY
-                                }
+                                // Boundary checks with immediate movement
+                                let clampedX = max(0, min(newX, geometry.size.width - cropRect.width))
+                                let clampedY = max(0, min(newY, geometry.size.height - cropRect.height))
+                                
+                                // Update position immediately
+                                cropRect.origin.x = clampedX
+                                cropRect.origin.y = clampedY
+                                
+                                // Update last drag location
+                                lastDragLocation = value.location
                             }
                         }
                         .onEnded { _ in

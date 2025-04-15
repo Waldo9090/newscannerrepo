@@ -14,7 +14,7 @@ class ChatViewModel: ObservableObject {
     init() {
         let initialMessage = MathChatMessage(
             role: "assistant",
-            content: "Hi! I'm your AI tutor assistant. What do you need help with?"
+            content: "Hi! I'm your math assistant. Ask me any math question, and I'll help you solve it step by step."
         )
         self.messages = [initialMessage]
     }
@@ -106,6 +106,11 @@ struct ChatDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ChatViewModel()
     @State private var userInput = ""
+    let mode: ChatMode?
+    
+    init(mode: ChatMode? = nil) {
+        self.mode = mode
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -123,7 +128,7 @@ struct ChatDetailView: View {
                 
                 Spacer()
                 
-                Text("Math Assistant")
+                Text(headerTitle)
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
@@ -244,6 +249,19 @@ struct ChatDetailView: View {
             .background(Color.black)
         }
         .background(Color.black)
+    }
+    
+    private var headerTitle: String {
+        switch mode {
+        case .write:
+            return "Write Assistant"
+        case .improve:
+            return "Improve Assistant"
+        case .summarize:
+            return "Summarize Assistant"
+        case .none:
+            return "Math Assistant"
+        }
     }
 }
 

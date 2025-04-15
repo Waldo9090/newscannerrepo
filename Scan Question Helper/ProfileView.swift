@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ProfileView: View {
     @State private var showCameraView = false
+    @State private var showOnboarding = false
+    @Environment(\.dismiss) private var dismiss
     let deviceId = GlobalContent.shared.deviceId
     
     var body: some View {
@@ -53,12 +55,38 @@ struct ProfileView: View {
                 Text("Settings")
                     .foregroundColor(.gray)
             }
+            
+            // Sign Out Section
+            Section {
+                Button(action: {
+                    // Clear any stored user data
+                    UserDefaults.standard.removeObject(forKey: "isOnboardingComplete")
+                    GlobalContent.shared.deviceId = "unknown-\(UUID().uuidString)"
+                    
+                    // Dismiss current view and show onboarding
+                    dismiss()
+                    showOnboarding = true
+                }) {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .foregroundColor(.red)
+                        Text("Sign Out")
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                }
+            }
         }
         .listStyle(InsetGroupedListStyle())
         .background(Color.black)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: $showOnboarding) {
+            NavigationStack {
+                UnifiedOnboardingView()
+            }
+        }
     }
 }
 

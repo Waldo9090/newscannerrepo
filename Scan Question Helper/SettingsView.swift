@@ -19,14 +19,12 @@ struct SettingsView: View {
     @AppStorage("isSignedIn") var isSignedIn: Bool = true
     // State variable to trigger navigation to FirstPageView
     @State private var navigateToFirstPage: Bool = false
+    @Environment(\.dismiss) private var dismiss
     
     // Define the URLs for Terms & Conditions and Privacy Policy
     private let termsOfUseURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     private let privacyPolicyURL = URL(string: "https://waldo9090.github.io/Privacy-Policy/")!
     
-    // If you want to dismiss the current view (if it is pushed onto a NavigationStack)
-    @Environment(\.presentationMode) var presentationMode
-
     var body: some View {
         NavigationView {
             VStack {
@@ -76,14 +74,12 @@ struct SettingsView: View {
                 
                 // Customized Capsule "Delete Account" Button
                 Button(action: {
-                    // Update user defaults to reflect the sign out state
+                    // Only update sign in state
                     isSignedIn = false
                     
-                    // Trigger navigation to FirstPageView
+                    // Dismiss current view and navigate to first page
+                    dismiss()
                     navigateToFirstPage = true
-                    
-                    // Optionally, if this view was pushed, you can dismiss it:
-                    // presentationMode.wrappedValue.dismiss()
                 }) {
                     Text("Delete Account")
                         .font(.system(size: 16, weight: .semibold))

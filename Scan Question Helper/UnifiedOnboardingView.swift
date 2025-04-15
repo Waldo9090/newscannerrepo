@@ -324,7 +324,7 @@ struct ThirdOnboardingPage: View {
             
             Spacer()
             
-            Text("Join 1M+\nSatisfied Students")
+            Text("Join 1M+\n Students")
                 .font(.title)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
