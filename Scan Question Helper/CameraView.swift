@@ -111,122 +111,122 @@ struct ScanView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color(UIColor.systemBackground)
-                .ignoresSafeArea()
-            
-            // Close button
-            Button(action: {
-                dismiss()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .padding(8)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(Circle())
-            }
-            .padding(.top, 16)
-            .padding(.trailing, 16)
-            
-            VStack(spacing: 16) {
-                Text("Scan Problem")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                    .padding(.top, 50)
-                    .multilineTextAlignment(.center)
+        NavigationStack {
+            ZStack(alignment: .topTrailing) {
+                Color(UIColor.systemBackground)
+                    .ignoresSafeArea()
                 
-                Text("Use the camera to capture your problems")
-                    .font(.custom("Inter-Regular", size: 16))
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 20)
-                
-                Image(uiImage: selectedImage ?? placeholderImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 350, height: 350)
-                    .clipped()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(20)
-                    .padding(.horizontal)
-                
-                // Button for taking a picture using the camera.
+                // Close button
                 Button(action: {
-                    showCameraPicker = true
+                    dismiss()
                 }) {
-                    HStack {
-                        Image(systemName: "camera")
-                            .font(.title2)
-                        Text("Take Picture")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.black)
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-                    .shadow(radius: 5)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.black.opacity(0.5))
+                        .clipShape(Circle())
                 }
-                .padding(.horizontal)
+                .padding(.top, 16)
+                .padding(.trailing, 16)
                 
-                // Button for uploading a picture from the photo library.
-                Button(action: {
-                    showPhotoLibraryPicker = true
-                }) {
-                    HStack {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.title2)
-                        Text("Upload Picture")
-                            .font(.system(size: 16, weight: .semibold))
+                VStack(spacing: 16) {
+                    Text("Scan Problem")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .padding(.top, 50)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("Use the camera to capture your problems")
+                        .font(.custom("Inter-Regular", size: 16))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom, 20)
+                    
+                    // Button for taking a picture using the camera.
+                    Button(action: {
+                        showCameraPicker = true
+                    }) {
+                        HStack {
+                            Image(systemName: "camera")
+                                .font(.title2)
+                            Text("Take Picture")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.black)
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                        .shadow(radius: 5)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.black)
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-                    .shadow(radius: 5)
+                    .padding(.horizontal)
+                    
+                    // Button for uploading a picture from the photo library.
+                    Button(action: {
+                        showPhotoLibraryPicker = true
+                    }) {
+                        HStack {
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.title2)
+                            Text("Upload Picture")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.black)
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                        .shadow(radius: 5)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Extra spacer or padding to ensure content sits above the TabBar.
+                    Spacer(minLength: 0)
+                        .frame(height: 80)
                 }
-                .padding(.horizontal)
-                
-                // Extra spacer or padding to ensure content sits above the TabBar.
-                Spacer(minLength: 0)
-                    .frame(height: 80)
-            }
-        }
-        .navigationBarHidden(true)
-        .preferredColorScheme(.dark)
-        // Present the Custom Camera Picker
-        .sheet(isPresented: $showCameraPicker) {
-            CustomCameraPicker(image: $selectedImage, sourceType: .camera)
-        }
-        // Present the Custom Photo Library Picker
-        .sheet(isPresented: $showPhotoLibraryPicker) {
-            CustomPhotoLibraryPicker(image: $selectedImage, sourceType: .photoLibrary)
-        }
-        // Present the ImageCropView when an image is selected
-        .fullScreenCover(isPresented: $showCropView) {
-            if let image = selectedImage {
-                ImageCropView(image: image) { croppedImage in
-                    self.finalCroppedImage = croppedImage
-                    self.navigateToMathChat = true
+                // --- NavigationLink to MathChatView after cropping ---
+                NavigationLink(
+                    destination: finalCroppedImage.map { MathChatView(selectedImage: $0) },
+                    isActive: $navigateToMathChat
+                ) {
+                    EmptyView()
                 }
             }
-        }
-        .onChange(of: selectedImage) { newImage in
-            if newImage != nil {
-                generateHapticFeedback()
-                showCropView = true
+            .navigationBarHidden(true)
+            .preferredColorScheme(.dark)
+            // Present the Custom Camera Picker
+            .sheet(isPresented: $showCameraPicker) {
+                CustomCameraPicker(image: $selectedImage, sourceType: .camera)
+            }
+            // Present the Custom Photo Library Picker
+            .sheet(isPresented: $showPhotoLibraryPicker) {
+                CustomPhotoLibraryPicker(image: $selectedImage, sourceType: .photoLibrary)
+            }
+            // Present the ImageCropView when an image is selected
+            .fullScreenCover(isPresented: $showCropView) {
+                if let image = selectedImage {
+                    ImageCropView(image: image) { croppedImage in
+                        self.finalCroppedImage = croppedImage
+                        self.navigateToMathChat = true
+                    }
+                }
+            }
+            .onChange(of: selectedImage) { newImage in
+                if newImage != nil {
+                    generateHapticFeedback()
+                    showCropView = true
+                }
             }
         }
     }

@@ -8,12 +8,11 @@ struct ImageCropView: View {
     @State private var imageSize: CGSize = .zero
     @State private var imageFrame: CGRect = .zero
     @State private var isDragging = false
-    @State private var lastDragLocation: CGPoint = .zero
     
     // Define Neon Purple Color
     let neonPurple = Color(red: 0.6, green: 0.0, blue: 1.0)
-    // Increased sensitivity for more responsive dragging
-    let dragSensitivityFactor: CGFloat = 0.5 // Increased from 0.1
+    // Reduce sensitivity for smoother dragging
+    let dragSensitivityFactor: CGFloat = 0.25 // Reduced from 0.4
     
     init(image: UIImage, onComplete: @escaping (UIImage) -> Void) {
         self.image = image
@@ -33,7 +32,7 @@ struct ImageCropView: View {
             ZStack {
                 Color.black.edgesIgnoringSafeArea(.all)
                 
-                // --- Image View (stays in background) --- 
+                // --- Image View (stays in background) ---
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -45,7 +44,7 @@ struct ImageCropView: View {
                     })
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // --- Crop Frame Overlay and Text (remain in ZStack) --- 
+                // --- Crop Frame Overlay and Text (remain in ZStack) ---
                 ZStack {
                     // Semi-transparent overlay
                     Rectangle()
@@ -66,7 +65,7 @@ struct ImageCropView: View {
                         .frame(width: cropRect.width, height: cropRect.height)
                         .position(x: cropRect.midX, y: cropRect.midY)
                     
-                    // --- Text Label Positioned Above Crop Rect --- 
+                    // --- Text Label Positioned Above Crop Rect ---
                     Text("Crop only one problem")
                         .font(.headline)
                         .foregroundColor(neonPurple)
@@ -152,31 +151,23 @@ struct ImageCropView: View {
                             if !isDragging {
                                 if cropRect.contains(value.startLocation) {
                                     isDragging = true
-                                    lastDragLocation = value.location
                                 }
                             } else {
-                                // Calculate the difference from the last drag location
-                                let deltaX = value.location.x - lastDragLocation.x
-                                let deltaY = value.location.y - lastDragLocation.y
+                                // Apply reduced sensitivity factor
+                                let adjustedTranslationX = value.translation.width * dragSensitivityFactor
+                                let adjustedTranslationY = value.translation.height * dragSensitivityFactor
                                 
-                                // Apply increased sensitivity factor
-                                let adjustedDeltaX = deltaX * dragSensitivityFactor
-                                let adjustedDeltaY = deltaY * dragSensitivityFactor
+                                let potentialX = cropRect.origin.x + adjustedTranslationX
+                                let potentialY = cropRect.origin.y + adjustedTranslationY
                                 
-                                // Calculate new position with direct movement
-                                let newX = cropRect.origin.x + adjustedDeltaX
-                                let newY = cropRect.origin.y + adjustedDeltaY
+                                // Boundary checks with smoother movement
+                                let clampedX = max(0, min(potentialX, geometry.size.width - cropRect.width))
+                                let clampedY = max(0, min(potentialY, geometry.size.height - cropRect.height))
                                 
-                                // Boundary checks with immediate movement
-                                let clampedX = max(0, min(newX, geometry.size.width - cropRect.width))
-                                let clampedY = max(0, min(newY, geometry.size.height - cropRect.height))
-                                
-                                // Update position immediately
-                                cropRect.origin.x = clampedX
-                                cropRect.origin.y = clampedY
-                                
-                                // Update last drag location
-                                lastDragLocation = value.location
+                                withAnimation(.interactiveSpring()) {
+                                    cropRect.origin.x = clampedX
+                                    cropRect.origin.y = clampedY
+                                }
                             }
                         }
                         .onEnded { _ in
@@ -184,7 +175,7 @@ struct ImageCropView: View {
                         }
                 )
                 
-                // --- Bottom Controls Overlay --- 
+                // --- Bottom Controls Overlay ---
                 VStack {
                     Spacer()
                     HStack(spacing: 40) {
@@ -218,7 +209,7 @@ struct ImageCropView: View {
     }
     
     private func cropImage() -> UIImage? {
-        guard imageFrame.width > 0, imageFrame.height > 0 else { return nil } 
+        guard imageFrame.width > 0, imageFrame.height > 0 else { return nil }
 
         // 1. Calculate the actual scale factor used by .fit
         let viewWidth = imageFrame.width

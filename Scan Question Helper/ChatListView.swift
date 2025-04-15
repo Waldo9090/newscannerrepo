@@ -110,15 +110,14 @@ struct ChatListView: View {
                     )
                 }
                 .padding()
+                // NavigationLink for navigation
+                NavigationLink(destination: ChatDetailView(), isActive: $showNewChat) {
+                    EmptyView()
+                }
             }
             .background(Color.black.opacity(0.6))
         }
         .background(Color.black)
-        .sheet(isPresented: $showNewChat) {
-            NavigationStack {
-                ChatDetailView()
-            }
-        }
     }
 }
 
